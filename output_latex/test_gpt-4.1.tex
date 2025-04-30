@@ -1,0 +1,58 @@
+```latex
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\begin{document}
+
+\[
+\mathcal{I} = \int_{-\infty}^\infty e^{-x^2} \, dx
+\]
+
+\[
+\mathcal{I}^2 = \left( \int_{-\infty}^\infty e^{-x^2} dx \right) \cdot \left( \int_{-\infty}^\infty e^{-y^2} dy \right)
+\]
+
+\[
+= \int_{-\infty}^\infty \int_{-\infty}^\infty e^{-x^2} \cdot e^{-y^2} dx \, dy
+\]
+
+\[
+= \int_{-\infty}^\infty \int_{-\infty}^\infty e^{-(x^2+y^2)} dx \, dy
+\]
+
+% Add derivation for Jacobian
+Now, converting to polar coordinates $(x = r\cos\theta, y = r\sin\theta)$, the Jacobian determinant is $r$, so
+
+\[
+= \int_0^{2\pi} \int_0^\infty e^{-r^2} r \, dr \, d\theta
+\]
+
+\[
+\mathcal{I}^2 = \int_0^{2\pi} d\theta \int_0^\infty r e^{-r^2} dr
+\]
+
+Let $u = r^2 \implies du = 2r dr \implies r dr = \frac{1}{2}du$:
+
+\[
+= 2\pi \int_0^\infty e^{-r^2} r dr = 2\pi \cdot \frac{1}{2} \int_0^\infty e^{-u} du
+\]
+
+\[
+= \pi \left( - e^{-u} \Big|_0^\infty \right)
+\]
+
+\[
+= \pi \left( 0 - (-1) \right) = \pi
+\]
+
+\[
+\mathcal{I}^2 = \pi
+\]
+
+\[
+\mathcal{I} = \sqrt{\pi}
+\]
+
+\end{document}
+```

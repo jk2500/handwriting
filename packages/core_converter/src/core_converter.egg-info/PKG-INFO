@@ -1,0 +1,15 @@
+Metadata-Version: 2.4
+Name: core_converter
+Version: 0.1.0
+Summary: Core PDF-to-LaTeX conversion logic.
+License: MIT
+Classifier: Programming Language :: Python :: 3
+Classifier: Operating System :: OS Independent
+Description-Content-Type: text/markdown
+Requires-Dist: PyMuPDF
+Requires-Dist: openai
+Requires-Dist: python-dotenv
+
+# Core Converter Package
+
+Handles the core logic for converting handwritten PDFs to LaTeX using VLM APIs. 

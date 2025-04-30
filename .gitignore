@@ -1,0 +1,22 @@
+# Ignore environment variables file
+.env
+
+# Ignore Python cache and compiled files
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore virtual environment folders (if created locally)
+venv/
+.venv/
+
+# Ignore IDE/editor specific files
+.vscode/
+.idea/ 
+
+# Ignore Next.js build/cache folders (if applicable)
+.next/
+out/
+
+# Ignore web app specific env files
+/apps/web/.env.local 

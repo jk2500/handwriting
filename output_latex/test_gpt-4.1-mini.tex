@@ -1,0 +1,55 @@
+```latex
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\begin{document}
+
+\title{Evaluation of the Gaussian Integral}
+\author{}
+\date{Sunday, April 27, 2025}
+\maketitle
+
+\begin{equation*}
+    \bar{I} = \int_{-\infty}^{\infty} e^{-x^2} \, dx
+\end{equation*}
+
+\begin{equation*}
+    \bar{I}^2 = \int_{-\infty}^{\infty} e^{-x^2} \, dx \cdot \int_{-\infty}^{\infty} e^{-y^2} \, dy
+\end{equation*}
+
+\begin{equation*}
+    = \iint_{-\infty}^{\infty} e^{-x^2} \cdot e^{-y^2} \, dx \, dy
+\end{equation*}
+
+\begin{equation*}
+    = \iint_{-\infty}^{\infty} e^{-(x^2 + y^2)} \, dx \, dy
+\end{equation*}
+
+% Add Derivation for Jacobian 
+
+Switching to polar coordinates $(r, \theta)$ where $x = r\cos\theta$, $y = r\sin\theta$, and $dx\,dy = r\,dr\,d\theta$:
+
+\begin{equation*}
+    \bar{I}^2 = \int_0^{2\pi} \int_0^{\infty} e^{-r^2} r \, dr \, d\theta
+\end{equation*}
+
+Evaluating the inner integral:
+
+\begin{equation*}
+    \int_0^{\infty} e^{-r^2} r \, dr = \left(-\frac{1}{2} e^{-r^2}\right)\Bigg|_0^{\infty} = \frac{1}{2}
+\end{equation*}
+
+Thus,
+
+\begin{equation*}
+    \bar{I}^2 = \int_0^{2\pi} \frac{1}{2} \, d\theta = \pi
+\end{equation*}
+
+Therefore,
+
+\begin{equation*}
+    \bar{I} = \sqrt{\pi}
+\end{equation*}
+
+\end{document}
+```

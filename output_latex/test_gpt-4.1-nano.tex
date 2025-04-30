@@ -1,0 +1,24 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+
+\begin{document}
+
+Sunday, April 27, 2025 \hfill 8:13 PM
+
+\begin{align*}
+I &= \int_{-\infty}^{\infty} e^{-x^2} \, dx \\
+I^2 &= \left( \int_{-\infty}^{\infty} e^{-x^2} \, dx \right) \left( \int_{-\infty}^{\infty} e^{-y^2} \, dy \right) \\
+&= \int_{-\infty}^{\infty} \int_{-\infty}^{\infty} e^{-(x^2 + y^2)} \, dx \, dy \\
+&= \iint_{-\infty}^{\infty} e^{-(x^2 + y^2)} \, dx \, dy \\
+\text{Add Derivation for Jacobian} \\
+&= \int_0^{2\pi} \int_0^{\infty} e^{-r^2} r \, dr \, d\theta \\
+&= \left( \int_0^{2\pi} d\theta \right) \left( \int_0^{\infty} r e^{-r^2} \, dr \right) \\
+&= 2\pi \times \left[ -\frac{1}{2} e^{-r^2} \right]_0^{\infty} \\
+&= 2\pi \times \frac{1}{2} \\
+&= \pi
+\end{align*}
+
+\end{document}

@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "core_converter"
+version = "0.1.0"
+description = "Core PDF-to-LaTeX conversion logic."
+readme = "README.md"
+license = {text = "MIT"} # Or choose another license
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+# Specify direct dependencies for this core package
+dependencies = [
+    "PyMuPDF",
+    "openai",
+    "python-dotenv",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]  # look for packages in the src directory 

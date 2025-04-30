@@ -1,0 +1,14 @@
+README.md
+pyproject.toml
+src/core_converter/__init__.py
+src/core_converter.egg-info/PKG-INFO
+src/core_converter.egg-info/SOURCES.txt
+src/core_converter.egg-info/dependency_links.txt
+src/core_converter.egg-info/requires.txt
+src/core_converter.egg-info/top_level.txt
+src/core_converter/latex_generation/__init__.py
+src/core_converter/latex_generation/generator.py
+src/core_converter/pdf_processing/__init__.py
+src/core_converter/pdf_processing/processor.py
+src/core_converter/vlm_interaction/__init__.py
+src/core_converter/vlm_interaction/api_client.py
