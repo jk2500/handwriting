@@ -45,7 +45,7 @@ To create a personal cloud-based service consisting of a **Web Application** and
     *   **(Future) Provide API endpoint to trigger segmentation image refinement using an image generation model (e.g., POST /jobs/{job_id}/refine).**
     *   **(Future) Run refinement task (calls image gen model to create Ti*k*Z-like images, saves refined images).**
     *   **Provide API endpoint to trigger final compilation task.**
-    *   Run final compilation task (integrating **original/refined** segmentations, running `pdflatex`) using Task Queue.
+    *   Run final compilation task (integrating **original/refined** segmentations, running `pdflatex`) using Task Queue. **(NEEDS IMPROVEMENT - Current method of replacing STRUCTURE placeholders with figure environments causes compilation errors. Need more robust handling, e.g., avoid inserting in math mode, ensure unique labels, maybe use different LaTeX structure).**
     *   Store final `.tex` and `.pdf` files (Cloud Storage).
     *   Serve data and file download links to web/mobile frontends via API.
 *   **(Future):** Model selection per conversion, advanced diagram/graph handling (e.g., sending cropped images to specialized models), **segmentation image refinement (Ti*k*Z style using image gen)**, sharing (if needed later), richer editing/preview features.
@@ -78,7 +78,7 @@ To create a personal cloud-based service consisting of a **Web Application** and
     *   Stores final generated `.tex` files (after segmentation integration).
     *   Stores final compiled `.pdf` files.
 *   **Task Queue (e.g., Celery + Redis/RabbitMQ):**
-    *   Manages the asynchronous execution of PDF rendering, **VLM conversion (including description extraction)**, **(Future) segmentation refinement (calling image gen model)**, and **final LaTeX compilation (including segmentation integration)** triggered by API requests.
+    *   Manages the asynchronous execution of PDF rendering, **VLM conversion (including description extraction)**, **(Future) segmentation refinement (calling image gen model)**, and **final LaTeX compilation (including segmentation integration - NEEDS IMPROVEMENT for structure/figure placement)** triggered by API requests.
     *   Worker Environment: Requires a full LaTeX distribution (e.g., TeX Live) installed. **(Future: Also requires access/SDK for image generation model).**
 *   **Web Frontend (e.g., React, Vue, Angular / HTMX + Server-Side Templates):**
     *   Communicates with the Backend API to display data and trigger actions.
@@ -106,32 +106,33 @@ To create a personal cloud-based service consisting of a **Web Application** and
 
 ## 6. Development Phases (High-Level)
 
-1.  **Phase 1 (Backend API & Core Logic): ALMOST COMPLETE**
-    *   Set up FastAPI project. **(COMPLETE)**
-    *   Define database models (PDFs, Jobs, PageImages, Segmentations, Job.segmentation_tasks, **updated JobStatus enum**). **(COMPLETE - pending migration for enum)**
-    *   Implement API endpoint for PDF upload (saving to Cloud Storage). **(COMPLETE)**
-    *   Integrate Celery/Redis. **(COMPLETE)**
-    *   Adapt **initial conversion logic** into a background Celery task (outputting initial `.tex` to Cloud Storage). **(PARTIALLY COMPLETE - Needs VLM output parsing update)**
-    *   Implement API endpoint to trigger task and endpoint to check job status. **(COMPLETE)**
-    *   Implement API endpoints to retrieve list of jobs/files, and download links/content. **(COMPLETE)**
-    *   Add PDF page rendering logic (on upload). **(COMPLETE)**
-    *   Add API endpoints to serve page images. **(COMPLETE)**
-    *   Add API endpoint to receive bounding box data. **(COMPLETE)**
-    *   **Add API endpoint to serve placeholder/description list.** **(PENDING ROUTER IMPL)**
-    *   **Update initial conversion Celery task to parse VLM descriptions and store mapping.** **(PENDING TASK IMPL)**
-    *   **Implement final compilation API endpoint (e.g., POST /jobs/{job_id}/compile).** **(PENDING ROUTER IMPL)**
-    *   **Implement final compilation Celery task (integrates segmentations, compiles, saves final .tex/.pdf).** **(PENDING TASK IMPL)**
-    *   **Database Migration (for JobStatus enum and potentially Job model updates).** **(PENDING)**
-2.  **Phase 2 (Web Frontend - Viewer & Segmentation): CURRENT FOCUS**
-    *   Set up basic React/Next.js project. **(COMPLETE)**
-    *   Implement a dashboard page to list conversion history/status (polling API, **handling new statuses**). **(COMPLETE)**
-    *   Implement views to display fetched LaTeX content and compiled PDF. **(COMPLETE)**
-    *   Implement download functionality. **(COMPLETE)**
-    *   Display rendered page images fetched from the backend. **(COMPLETE)**
-    *   Implement UI for drawing bounding boxes on page images. **(COMPLETE)**
-    *   Implement UI/logic to iterate through segmentation tasks (description + placeholder) and associate drawn boxes. **(COMPLETE)**
-    *   **Implement UI element to trigger final compilation.** **(PENDING)**
-3.  **Phase 3 (Mobile Frontend - Uploader): CURRENT FOCUS**
+1.  **Phase 1 (Backend API & Core Logic): (COMPLETE)**
+    *   Set up FastAPI project.
+    *   Define database models (PDFs, Jobs, PageImages, Segmentations, Job.segmentation_tasks, **updated JobStatus enum**).
+    *   Implement API endpoint for PDF upload (saving to Cloud Storage).
+    *   Integrate Celery/Redis.
+    *   Adapt **initial conversion logic** into a background Celery task (outputting initial `.tex` to Cloud Storage).
+    *   Implement API endpoint to trigger task and endpoint to check job status.
+    *   Implement API endpoints to retrieve list of jobs/files, and download links/content.
+    *   Add PDF page rendering logic (on upload).
+    *   Add API endpoints to serve page images.
+    *   Add API endpoint to receive bounding box data.
+    *   **Add API endpoint to serve placeholder/description list.**
+    *   **Update initial conversion Celery task to parse VLM descriptions and store mapping.**
+    *   **Implement final compilation API endpoint (e.g., POST /jobs/{job_id}/compile).**
+    *   **Implement final compilation Celery task (integrates segmentations, compiles, saves final .tex/.pdf).**
+    *   **Database Migration (for JobStatus enum and potentially Job model updates).**
+2.  **Phase 2 (Web Frontend - Viewer & Segmentation): (IN PROGRESS)**
+    *   Set up basic React/Next.js project. (**COMPLETE**)
+    *   Implement a dashboard page to list conversion history/status (polling API, **handling new statuses**). (**IN PROGRESS** - Basic list implemented)
+    *   Implement PDF upload form and integrate into dashboard. (**COMPLETE**)
+    *   Implement views to display fetched LaTeX content and compiled PDF. (**PENDING**)
+    *   Implement download functionality and action buttons (Download TeX/PDF, Segment, Compile) in the job list. (**COMPLETE**)
+    *   Display rendered page images fetched from the backend. (**NEXT - Part of Segmentation Page**)
+    *   Implement UI for drawing bounding boxes on page images. (**NEXT - Part of Segmentation Page**)
+    *   Implement UI/logic to iterate through segmentation tasks (description + placeholder) and associate drawn boxes. (**NEXT - Part of Segmentation Page**)
+    *   **Implement UI element to trigger final compilation.** (**COMPLETE** - Button added, endpoint call pending integration)
+3.  **Phase 3 (Mobile Frontend - Uploader):**
     *   Set up basic React Native project.
     *   Implement PDF upload functionality (camera/file) calling API.
     *   Implement view to show upload/conversion/compilation status (polling API).
@@ -143,6 +144,7 @@ To create a personal cloud-based service consisting of a **Web Application** and
         *   **Backend:** Add new `JobStatus` values, `/refine` endpoint, refinement Celery task (calling image gen model), update `/compile` task to use refined images. Update DB model.
         *   **Frontend (Web):** Add "Refine" button, handle new statuses, optionally display refined images. *(Future: Could be added to Mobile)*
     *   Strengthen error handling (including compilation errors).
+    *   **Improve LaTeX Compilation Robustness:** Revisit the `compile_final_document` task to handle figure/structure insertion more reliably, avoiding common LaTeX errors like placement within math mode or duplicate labels.
     *   Testing across components (including segmentation -> **(optional refinement) ->** compilation flow).
     *   **Address multi-page VLM processing.**
 5.  **Phase 5 (Advanced Features):**
@@ -151,16 +153,16 @@ To create a personal cloud-based service consisting of a **Web Application** and
 
 ## 7. Next Steps
 
-*   **Complete Backend Phase 1:**
-    *   **Add new JobStatus enum values (including compilation states, placeholder for future refinement states) and update Job model if needed.**
-    *   **Generate and run Alembic migration for database changes.**
-    *   Implement `GET /jobs/{job_id}/segmentation-tasks` endpoint in `routers/jobs.py`.
-    *   Modify **initial conversion** Celery task in `tasks.py` to parse descriptions and store in `Job.segmentation_tasks`.
-    *   **Implement `POST /jobs/{job_id}/compile` endpoint in `routers/jobs.py`.**
-    *   **Implement final compilation Celery task in `tasks.py`.**
-*   **Complete Web Frontend Phase 2:**
-    *   **Implement UI element/button to call the `/compile` endpoint.**
-    *   **Ensure UI handles new compilation-related job statuses (and placeholder for future refinement statuses).**
-*   **Start Mobile Frontend Phase 3:**
+*   **Web Frontend Phase 2 (Segmentation Focus):**
+    *   Create the Segmentation page/route (e.g., `/segment/[jobId]`).
+    *   Fetch job details and display rendered page images for the specific job on the Segmentation page.
+    *   Integrate a drawing library (e.g., `react-konva`) for bounding box creation/management.
+    *   Implement logic to save segmentation data (bounding boxes associated with placeholders) back to the backend API.
+    *   Connect the "Segment" button on the dashboard to this new page.
+    *   Refine the dashboard page (e.g., better status handling, polling).
+    *   Implement the API calls for the "Download TeX", "Download PDF", and "Compile" buttons.
+*   **Mobile Frontend Phase 3:**
     *   Set up the mobile frontend project structure.
     *   Implement PDF upload functionality.
+    *   Implement view to show upload/conversion/compilation status (polling API).
+    *   Implement view to display compiled PDF.
