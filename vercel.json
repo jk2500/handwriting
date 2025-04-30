@@ -1,0 +1,28 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "apps/web/package.json",
+      "use": "@vercel/next",
+      "config": { "distDir": "out" }
+    },
+    {
+      "src": "apps/backend_api/requirements.txt",
+      "use": "@vercel/python",
+      "config": { "maxLambdaSize": "15mb" }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "apps/backend_api/main.py" 
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "apps/web" 
+    }
+  ]
+} 
