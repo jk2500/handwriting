@@ -20,8 +20,7 @@
       "handle": "filesystem"
     },
     {
-      "src": "/(.*)",
-      "dest": "apps/web" 
+      "src": "/(.*)", "dest": "apps/web/$1"
     }
   ]
 } 
