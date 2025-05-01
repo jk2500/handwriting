@@ -7,8 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from 'sonner';
 import { FileUp, Upload, File, X, CheckCircle2 } from 'lucide-react'; // Import icons
 import { cn } from '@/lib/utils'; // Import cn utility for conditional class names
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+import { API_BASE_URL } from '@/lib/utils';
 
 interface UploadFormProps {
   onUploadSuccess: () => void;
