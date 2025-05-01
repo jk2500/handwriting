@@ -58,7 +58,7 @@ export function UploadForm({ onUploadSuccess }: UploadFormProps) {
     formData.append('file', selectedFile);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/upload`, {
+      const response = await fetch(`${API_BASE_URL}/upload/pdf`, {
         method: 'POST',
         body: formData,
       });

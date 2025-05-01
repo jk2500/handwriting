@@ -95,9 +95,11 @@ export default function Home() {
         </p>
       </div>
 
-      <UploadForm onUploadSuccess={fetchJobs} />
+      <div className="max-w-4xl mx-auto mb-8">
+        <UploadForm onUploadSuccess={fetchJobs} />
+      </div>
 
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between max-w-4xl mx-auto">
         <h2 className="text-2xl font-semibold flex items-center gap-2">
           <FileText className="h-5 w-5 text-primary" />
           Recent Jobs
@@ -115,13 +117,13 @@ export default function Home() {
       </div>
 
       {loading && jobs.length === 0 && (
-        <div className="flex justify-center items-center p-12">
+        <div className="flex justify-center items-center p-12 max-w-4xl mx-auto">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
         </div>
       )}
       
       {error && (
-        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 rounded-lg p-4 my-4 flex items-start gap-3">
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 rounded-lg p-4 my-4 flex items-start gap-3 max-w-4xl mx-auto">
           <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
           <div>
             <h3 className="font-medium">Error loading jobs</h3>
@@ -131,7 +133,7 @@ export default function Home() {
       )}
 
       {!error && (
-        <div className="rounded-xl border bg-card shadow-sm overflow-hidden card-hover">
+        <div className="rounded-xl border bg-card shadow-sm overflow-hidden card-hover max-w-4xl mx-auto">
           <Table>
             {recentJobs.length === 0 && !loading ? (
               <TableCaption>No jobs found. Upload a PDF to get started.</TableCaption>
@@ -141,9 +143,9 @@ export default function Home() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[250px]">Filename</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Model</TableHead>
+                <TableHead className="w-[140px]">Status</TableHead>
+                <TableHead className="w-[120px]">Created</TableHead>
+                <TableHead className="w-[100px]">Model</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
