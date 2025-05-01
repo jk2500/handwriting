@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { UploadForm } from '@/components/UploadForm';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -13,23 +12,33 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FileText, FileType, Scissors, PlayCircle, Clock, AlertCircle, CheckCircle, ChevronRight } from "lucide-react";
+import { FileText, FileType, Scissors, PlayCircle, Clock, AlertCircle, CheckCircle, ArrowUpDown, RotateCcw } from "lucide-react";
 import { toast } from 'sonner';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Job {
   id: string;
   input_pdf_filename: string;
-  status: string; // Should match JobStatus enum values from backend
+  status: string;
   created_at: string;
   updated_at: string | null;
   completed_at: string | null;
   error_message: string | null;
-  // Add other relevant fields from backend Job model if needed
   initial_tex_s3_path: string | null;
   final_tex_s3_path: string | null;
   final_pdf_s3_path: string | null;
-  segmentation_tasks: Record<string, string> | null; // Assuming JSON object {placeholder: description}
+  segmentation_tasks: Record<string, string> | null;
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -51,17 +60,17 @@ const getStatusClass = (status: string): string => {
     case 'rendering':
     case 'processing_vlm':
     case 'compilation_pending':
-    case 'refinement_in_progress': // Future
+    case 'refinement_in_progress':
       return 'text-blue-500 font-semibold';
     case 'awaiting_segmentation': return 'text-yellow-600 font-semibold';
     case 'segmentation_complete': return 'text-purple-500 font-semibold';
     case 'compilation_complete':
     case 'completed':
-    case 'refinement_complete': // Future
+    case 'refinement_complete':
       return 'text-green-600 font-semibold';
     case 'failed':
     case 'compilation_failed':
-    case 'refinement_failed': // Future
+    case 'refinement_failed':
       return 'text-red-600 font-semibold';
     default: return 'text-foreground';
   }
@@ -94,10 +103,14 @@ const StatusIcon = ({ status }: { status: string }) => {
   }
 };
 
-export default function Home() {
-  const [jobs, setJobs] = useState<Job[]>([]);
+export default function JobsPage() {
+  const [allJobs, setAllJobs] = useState<Job[]>([]);
+  const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc'); // Default to newest first
 
   const fetchJobs = useCallback(async () => {
     setError(null);
@@ -107,29 +120,77 @@ export default function Home() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data: Job[] = await response.json();
-      // Sort by creation date (newest first)
-      data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      setJobs(data);
+      // Sort by creation date (newest first by default)
+      data.sort((a, b) => {
+        if (sortOrder === 'desc') {
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        } else {
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        }
+      });
+      setAllJobs(data);
+      applyFilters(data, searchTerm, statusFilter);
     } catch (e: any) {
       setError(`Failed to fetch jobs: ${e.message}`);
       console.error("Fetch error:", e);
-      setJobs([]); // Clear jobs on error
+      setAllJobs([]);
+      setFilteredJobs([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [sortOrder, searchTerm, statusFilter]);
 
-  useEffect(() => {
-    setLoading(true);
-    fetchJobs();
-    // Simple polling for updates every 10 seconds
-    const intervalId = setInterval(fetchJobs, 10000);
-    return () => clearInterval(intervalId);
-  }, [fetchJobs]);
+  // Apply filters to jobs
+  const applyFilters = (jobs: Job[], search: string, status: string) => {
+    let filtered = [...jobs];
+    
+    // Apply search filter
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filtered = filtered.filter(job => 
+        job.input_pdf_filename?.toLowerCase().includes(searchLower) ||
+        job.id.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    // Apply status filter
+    if (status !== 'all') {
+      filtered = filtered.filter(job => job.status === status);
+    }
+    
+    setFilteredJobs(filtered);
+  };
 
-  // Get only the 4 most recent jobs for the home page
-  const recentJobs = jobs.slice(0, 4);
+  // Handle search term change
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newSearchTerm = e.target.value;
+    setSearchTerm(newSearchTerm);
+    applyFilters(allJobs, newSearchTerm, statusFilter);
+  };
 
+  // Handle status filter change
+  const handleStatusFilter = (value: string) => {
+    setStatusFilter(value);
+    applyFilters(allJobs, searchTerm, value);
+  };
+
+  // Toggle sort order
+  const toggleSortOrder = () => {
+    const newOrder = sortOrder === 'desc' ? 'asc' : 'desc';
+    setSortOrder(newOrder);
+    
+    const sortedJobs = [...filteredJobs].sort((a, b) => {
+      if (newOrder === 'desc') {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      } else {
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
+    });
+    
+    setFilteredJobs(sortedJobs);
+  };
+
+  // Handle compilation
   const handleCompile = async (jobId: string) => {
     const toastId = toast.loading('Compiling document...');
     try {
@@ -142,8 +203,7 @@ export default function Home() {
       }
       
       toast.success('Compilation triggered', { id: toastId });
-      console.log(`Compilation triggered for job ${jobId}`);
-      // Refresh job list shortly after to hopefully catch status update
+      // Refresh job list shortly after
       setTimeout(fetchJobs, 1000);
     } catch (e: any) {
       console.error("Compile error:", e);
@@ -151,42 +211,93 @@ export default function Home() {
     }
   };
 
+  useEffect(() => {
+    setLoading(true);
+    fetchJobs();
+    
+    // Set up polling for updates
+    const intervalId = setInterval(fetchJobs, 10000);
+    return () => clearInterval(intervalId);
+  }, [fetchJobs]);
+
   return (
     <div className="container mx-auto px-4 py-8 page-animation">
-      <div className="mb-10 text-center">
-        <h1 className="text-4xl font-bold mb-4 text-center bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-          Handwriting Conversion
-        </h1>
-        <p className="text-lg text-muted-foreground max-w-lg mx-auto">
-          Convert your handwritten PDFs to LaTeX with ease. Upload your PDF, segment diagrams, and compile.
-        </p>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-4">All Conversion Jobs</h1>
+        <p className="text-muted-foreground">View and manage all your LaTeX conversion jobs.</p>
       </div>
 
-      <UploadForm onUploadSuccess={fetchJobs} />
+      {/* Filters & Controls */}
+      <Card className="mb-6">
+        <CardHeader className="pb-3">
+          <CardTitle>Filters & Controls</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <Label htmlFor="search" className="mb-2 block">Search Jobs</Label>
+              <Input
+                id="search"
+                placeholder="Search by filename or ID..."
+                value={searchTerm}
+                onChange={handleSearch}
+                className="max-w-full"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="status-filter" className="mb-2 block">Filter by Status</Label>
+              <Select value={statusFilter} onValueChange={handleStatusFilter}>
+                <SelectTrigger id="status-filter">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="rendering">Rendering</SelectItem>
+                    <SelectItem value="processing_vlm">Processing VLM</SelectItem>
+                    <SelectItem value="awaiting_segmentation">Awaiting Segmentation</SelectItem>
+                    <SelectItem value="segmentation_complete">Segmentation Complete</SelectItem>
+                    <SelectItem value="compilation_pending">Compilation Pending</SelectItem>
+                    <SelectItem value="compilation_complete">Compilation Complete</SelectItem>
+                    <SelectItem value="failed">Failed</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex items-end space-x-2">
+              <Button 
+                variant="outline" 
+                onClick={toggleSortOrder} 
+                className="gap-1 flex-1"
+              >
+                <ArrowUpDown className="h-4 w-4" />
+                Sort: {sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}
+              </Button>
+              
+              <Button 
+                variant="secondary" 
+                onClick={() => fetchJobs()}
+                className="gap-1"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Refresh
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-2xl font-semibold flex items-center gap-2">
-          <FileText className="h-5 w-5 text-primary" />
-          Recent Jobs
-        </h2>
-        <Link href="/jobs">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="flex items-center gap-1"
-          >
-            View All Jobs
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </Link>
-      </div>
-
-      {loading && jobs.length === 0 && (
+      {/* Loading State */}
+      {loading && allJobs.length === 0 && (
         <div className="flex justify-center items-center p-12">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
         </div>
       )}
       
+      {/* Error State */}
       {error && (
         <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 rounded-lg p-4 my-4 flex items-start gap-3">
           <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
@@ -197,13 +308,21 @@ export default function Home() {
         </div>
       )}
 
+      {/* Jobs Table */}
       {!error && (
-        <div className="rounded-xl border bg-card shadow-sm overflow-hidden card-hover">
+        <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
           <Table>
-            {recentJobs.length === 0 && !loading ? (
-              <TableCaption>No jobs found. Upload a PDF to get started.</TableCaption>
+            {filteredJobs.length === 0 && !loading ? (
+              <TableCaption>
+                {searchTerm || statusFilter !== 'all' 
+                  ? 'No jobs match your filters. Try adjusting your search criteria.'
+                  : 'No jobs found. Upload a PDF to get started.'}
+              </TableCaption>
             ) : (
-              <TableCaption>Your most recent conversion jobs. <Link href="/jobs" className="text-primary hover:underline">View all</Link></TableCaption>
+              <TableCaption>
+                Showing {filteredJobs.length} {filteredJobs.length === 1 ? 'job' : 'jobs'}
+                {searchTerm || statusFilter !== 'all' ? ' matching your filters' : ''}
+              </TableCaption>
             )}
             <TableHeader>
               <TableRow>
@@ -214,14 +333,16 @@ export default function Home() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {recentJobs.length === 0 && !loading ? (
+              {filteredJobs.length === 0 && !loading ? (
                 <TableRow>
                   <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                    No jobs found.
+                    {searchTerm || statusFilter !== 'all' 
+                      ? 'No jobs match your filters.'
+                      : 'No jobs found.'}
                   </TableCell>
                 </TableRow>
               ) : (
-                recentJobs.map((job) => {
+                filteredJobs.map((job) => {
                   const canDownloadTex = !['pending', 'rendering', 'processing_vlm', 'failed'].includes(job.status);
                   const canDownloadPdf = job.status === 'compilation_complete';
                   const canSegment = ['awaiting_segmentation', 'segmentation_complete'].includes(job.status);
@@ -300,4 +421,4 @@ export default function Home() {
       )}
     </div>
   );
-}
+} 

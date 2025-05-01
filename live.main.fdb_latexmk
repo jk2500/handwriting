@@ -1,0 +1,25 @@
+# Fdb version 4
+["pdflatex"] 1745991284.24145 "/Users/rkph/Desktop/projects/handwriting/live.main.tex" "live.main.pdf" "live.main" 1745991284.58884 2
+  "/Users/rkph/Desktop/projects/handwriting/live.main.tex" 1745769233.39364 176 8f8483b75d0c171a80b676b8e613d791 ""
+  "/usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb" 1248133631 35752 024fb6c41858982481f6968b5fc26508 ""
+  "/usr/local/texlive/2025/texmf-dist/tex/latex/amsfonts/amsfonts.sty" 1359763108 5949 3f3fd50a8cc94c3d4cbf4fc66cd3df1c ""
+  "/usr/local/texlive/2025/texmf-dist/tex/latex/amsfonts/amssymb.sty" 1359763108 13829 94730e64147574077f8ecfea9bb69af4 ""
+  "/usr/local/texlive/2025/texmf-dist/tex/latex/amsmath/amsbsy.sty" 1717359999 2222 2166a1f7827be30ddc30434e5efcee1b ""
+  "/usr/local/texlive/2025/texmf-dist/tex/latex/amsmath/amsgen.sty" 1717359999 4173 d22509bc0c91281d991b2de7c88720dd ""
+  "/usr/local/texlive/2025/texmf-dist/tex/latex/amsmath/amsmath.sty" 1730928152 88370 c780f23aea0ece6add91e09b44dca2cd ""
+  "/usr/local/texlive/2025/texmf-dist/tex/latex/amsmath/amsopn.sty" 1717359999 4474 23ca1d3a79a57b405388059456d0a8df ""
+  "/usr/local/texlive/2025/texmf-dist/tex/latex/amsmath/amstext.sty" 1717359999 2444 71618ea5f2377e33b04fb97afdd0eac2 ""
+  "/usr/local/texlive/2025/texmf-dist/tex/latex/base/article.cls" 1738182759 20144 63d8bacaf52e5abf4db3bc322373e1d4 ""
+  "/usr/local/texlive/2025/texmf-dist/tex/latex/base/size10.clo" 1738182759 8448 5cf247d4bd0c7d5d711bbbdf111fae2e ""
+  "/usr/local/texlive/2025/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def" 1716410060 29785 9f93ab201fe5dd053afcc6c1bcf7d266 ""
+  "/usr/local/texlive/2025/texmf-dist/web2c/texmf.cnf" 1739380943 42148 61becc7c670cd061bb319c643c27fdd4 ""
+  "/usr/local/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1745768129 5467155 19efa205003f9ecad95fbbaa6ff24da1 ""
+  "/usr/local/texlive/2025/texmf-var/web2c/pdftex/pdflatex.fmt" 1745768053 3345739 de4c8ff7e8fc9341e63061d4f9ac363c ""
+  "/usr/local/texlive/2025/texmf.cnf" 1741450484 577 418a7058ec8e006d8704f60ecd22c938 ""
+  "live.main.aux" 1745991284.5641 32 3985256e7290058c681f74d7a3565a19 "pdflatex"
+  "live.main.tex" 1745769233.39364 176 8f8483b75d0c171a80b676b8e613d791 ""
+  (generated)
+  "live.main.aux"
+  "live.main.log"
+  "live.main.pdf"
+  (rewritten before read)
