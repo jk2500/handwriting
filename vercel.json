@@ -3,8 +3,7 @@
   "builds": [
     {
       "src": "apps/web/package.json",
-      "use": "@vercel/next",
-      "config": { "distDir": "out" }
+      "use": "@vercel/next"
     },
     {
       "src": "apps/backend_api/requirements.txt",
