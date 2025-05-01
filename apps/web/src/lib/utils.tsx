@@ -1,6 +1,6 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { FileText, FileType, Scissors, PlayCircle, Clock, AlertCircle, CheckCircle } from "lucide-react";
+import { Scissors, Clock, AlertCircle, CheckCircle } from "lucide-react";
 import React from 'react';
 
 // Common constant for API URL
@@ -27,7 +27,7 @@ export const formatDate = (dateString: string | null) => {
   if (!dateString) return 'N/A';
   try {
     return new Date(dateString).toLocaleString();
-  } catch (e) {
+  } catch {
     return 'Invalid Date';
   }
 };

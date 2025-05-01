@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FileText, FileType, Scissors, PlayCircle, ArrowUpDown, RotateCcw, AlertCircle, Clock, CheckCircle } from "lucide-react";
+import { FileText, Scissors, PlayCircle, ArrowUpDown, RotateCcw, AlertCircle } from "lucide-react";
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,6 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -56,8 +55,9 @@ export default function JobsPage() {
       });
       setAllJobs(data);
       applyFilters(data, searchTerm, statusFilter);
-    } catch (e: any) {
-      setError(`Failed to fetch jobs: ${e.message}`);
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      setError(`Failed to fetch jobs: ${errorMessage}`);
       console.error("Fetch error:", e);
       setAllJobs([]);
       setFilteredJobs([]);
@@ -131,9 +131,10 @@ export default function JobsPage() {
       toast.success('Compilation triggered', { id: toastId });
       // Refresh job list shortly after
       setTimeout(fetchJobs, 1000);
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
       console.error("Compile error:", e);
-      toast.error(`Failed to trigger compilation: ${e.message}`, { id: toastId });
+      toast.error(`Failed to trigger compilation: ${errorMessage}`, { id: toastId });
     }
   };
 
@@ -366,7 +367,7 @@ export default function JobsPage() {
                             title="Download PDF file"
                             className="gap-1 button-hover-effect"
                           >
-                            <FileType className="h-3.5 w-3.5" />
+                            <FileText className="h-3.5 w-3.5" />
                             <span>PDF</span>
                           </Button>
                         )}

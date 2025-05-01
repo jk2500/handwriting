@@ -1,12 +1,11 @@
 'use client';
 
-import React, { useState, useCallback, RefObject, useMemo } from 'react';
+import React, { useState, RefObject, useMemo } from 'react';
 import { toast } from 'sonner';
 import { BoundingBox, SegmentationTaskItem, PageImageInfo } from './useSegmentationData';
 
 interface UseDrawingProps {
     containerRef: RefObject<HTMLDivElement | null>;
-    containerSize: { width: number; height: number };
     renderedImageSize: { width: number; height: number }; // Actual image size on screen
     imageOffset: { x: number; y: number }; // Offset of image within container (if centered)
     currentTask: SegmentationTaskItem | undefined;
@@ -26,7 +25,6 @@ interface DrawingBox {
 
 export function useDrawing({ 
     containerRef, 
-    containerSize, 
     renderedImageSize,
     imageOffset,
     currentTask, 
@@ -111,8 +109,8 @@ export function useDrawing({
         const startY = Math.min(newBox.startY, newBox.endY);
         const endX = Math.max(newBox.startX, newBox.endX);
         const endY = Math.max(newBox.startY, newBox.endY);
-        let width = endX - startX;
-        let height = endY - startY;
+        const width = endX - startX;
+        const height = endY - startY;
 
         // Check if the newBox being processed actually has a page number
         console.log("[useDrawing] handleDrawEnd - processing newBox:", newBox);

@@ -118,10 +118,11 @@ export function useSegmentationData({ jobId }: UseSegmentationDataProps) {
                 // setError(`Warning: Could not fetch existing segmentations: ${segRes.statusText}`);
             }
 
-        } catch (e: any) {
-            setError(`Failed to load segmentation data: ${e.message}`);
+        } catch (e: unknown) {
+            const errorMessage = e instanceof Error ? e.message : String(e);
+            setError(`Failed to load segmentation data: ${errorMessage}`);
             console.error("Fetch error:", e);
-            toast.error(`Error loading data: ${e.message}`);
+            toast.error(`Error loading data: ${errorMessage}`);
         } finally {
             setLoading(false);
         }

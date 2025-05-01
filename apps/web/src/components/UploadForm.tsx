@@ -72,8 +72,9 @@ export function UploadForm({ onUploadSuccess }: UploadFormProps) {
       setSelectedFile(null);
       onUploadSuccess();
 
-    } catch (e: any) {
-        toast.error(`Upload failed: ${e.message}`, { id: toastId });
+    } catch (e: unknown) {
+        const errorMessage = e instanceof Error ? e.message : String(e);
+        toast.error(`Upload failed: ${errorMessage}`, { id: toastId });
         console.error('Upload error:', e);
     } finally {
         setIsUploading(false);

@@ -17,7 +17,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 // Import hooks and components
-import { useSegmentationData, BoundingBox } from './hooks/useSegmentationData';
+import { useSegmentationData } from './hooks/useSegmentationData';
 import { useImageLoader } from './hooks/useImageLoader';
 import { useDrawing } from './hooks/useDrawing';
 import { TaskList } from './components/TaskList';
@@ -50,8 +50,7 @@ export default function SegmentationPage() {
     const {
         imageObj,
         containerSize,
-        renderedImageSize,
-        imageScale 
+        renderedImageSize
     } = useImageLoader({ pageImages, currentPageIndex, containerRef });
     
     // Calculate image offset within the container (assuming centered)
@@ -80,7 +79,6 @@ export default function SegmentationPage() {
         drawingEventHandlers
     } = useDrawing({ 
         containerRef,
-        containerSize,
         renderedImageSize, 
         imageOffset,
         currentTask, 
@@ -177,8 +175,8 @@ export default function SegmentationPage() {
                      let errorBody = "Could not read error response.";
                      try {
                          errorBody = await response.json(); 
-                     } catch (e) {
-                         try { errorBody = await response.text(); } catch (e2) { /* Ignore */ }
+                     } catch {
+                         try { errorBody = await response.text(); } catch { /* Ignore */ }
                      }
                      console.error("Segmentation save error response:", errorBody);
                     throw new Error(`Failed to save segmentations: ${response.status} ${response.statusText}`);
@@ -196,8 +194,9 @@ export default function SegmentationPage() {
             }
             toast.success("Compilation process started. Redirecting to jobs list...");
             router.push(`/jobs`); 
-        } catch (error: any) {
-            toast.error(`Error during save/compile: ${error.message}`);
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            toast.error(`Error during save/compile: ${errorMessage}`);
             console.error("Save/compile error details:", error);
         } finally {
             setIsSaving(false);

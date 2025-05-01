@@ -13,9 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FileText, FileType, Scissors, PlayCircle, ChevronRight, AlertCircle } from "lucide-react";
+import { FileText, Scissors, PlayCircle, ChevronRight, AlertCircle } from "lucide-react";
 import { toast } from 'sonner';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   API_BASE_URL, 
   type Job, 
@@ -40,8 +39,9 @@ export default function Home() {
       // Sort by creation date (newest first)
       data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setJobs(data);
-    } catch (e: any) {
-      setError(`Failed to fetch jobs: ${e.message}`);
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      setError(`Failed to fetch jobs: ${errorMessage}`);
       console.error("Fetch error:", e);
       setJobs([]); // Clear jobs on error
     } finally {
@@ -75,9 +75,10 @@ export default function Home() {
       console.log(`Compilation triggered for job ${jobId}`);
       // Refresh job list shortly after to hopefully catch status update
       setTimeout(fetchJobs, 1000);
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
       console.error("Compile error:", e);
-      toast.error(`Failed to trigger compilation: ${e.message}`, { id: toastId });
+      toast.error(`Failed to trigger compilation: ${errorMessage}`, { id: toastId });
     }
   };
 
@@ -251,7 +252,7 @@ export default function Home() {
                             title="Download PDF file"
                             className="gap-1 button-hover-effect"
                           >
-                            <FileType className="h-3.5 w-3.5" />
+                            <FileText className="h-3.5 w-3.5" />
                             <span>PDF</span>
                           </Button>
                         )}

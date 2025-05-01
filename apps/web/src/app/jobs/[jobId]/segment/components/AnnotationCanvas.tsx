@@ -2,11 +2,10 @@
 
 import React, { useMemo, CSSProperties } from 'react';
 import { BoundingBox } from '../hooks/useSegmentationData';
-import { TrashIcon } from 'lucide-react';
 
 // Type for the temporary box being drawn
 interface DrawingBoxStyle extends CSSProperties {
-    // Inherits CSS properties + display: 'none'
+    display?: string;
 }
 
 // Props for the component
@@ -18,7 +17,15 @@ interface AnnotationCanvasProps {
     imageObj: HTMLImageElement | null;
     boxesToRender: BoundingBox[];
     newBoxStyle: DrawingBoxStyle;
-    drawingEventHandlers: any;
+    drawingEventHandlers: {
+        onMouseDown: React.MouseEventHandler<HTMLDivElement>;
+        onMouseMove: React.MouseEventHandler<HTMLDivElement>;
+        onMouseUp: React.MouseEventHandler<HTMLDivElement>;
+        onMouseLeave: React.MouseEventHandler<HTMLDivElement>;
+        onTouchStart: React.TouchEventHandler<HTMLDivElement>;
+        onTouchMove: React.TouchEventHandler<HTMLDivElement>;
+        onTouchEnd: React.TouchEventHandler<HTMLDivElement>;
+    };
     onRemoveBox: (index: number) => void;
 }
 

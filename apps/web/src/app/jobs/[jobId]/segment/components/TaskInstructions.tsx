@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { PenToolIcon, TrashIcon } from 'lucide-react';
-import { SegmentationTaskItem } from './hooks/useSegmentationData'; // Import shared type
+import { SegmentationTaskItem } from '../hooks/useSegmentationData'; // Import shared type
 
 interface TaskInstructionsProps {
     currentTask: SegmentationTaskItem | undefined;
