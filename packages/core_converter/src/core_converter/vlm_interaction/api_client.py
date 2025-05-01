@@ -16,6 +16,7 @@ load_dotenv()
 DUMMY_LATEX_OUTPUT = r"""
 \documentclass{article}
 \usepackage{amsmath}
+\author{ramakrishna} % Added default author
 \begin{document}
 
 This is a placeholder LaTeX document generated because the VLM API interaction is not yet fully implemented or failed.
@@ -40,7 +41,7 @@ def get_latex_from_image(image_path: str, model_name: str = "gpt-4-vision-previe
         model_name: The specific OpenAI model to use (e.g., 'gpt-4-vision-preview').
 
     Returns:
-        LaTeX string recognized by the VLM, or a dummy string on failure.
+        Tuple containing: (LaTeX string, Descriptions string)
     """
     try:
         # --- API Interaction ---
@@ -67,22 +68,23 @@ def get_latex_from_image(image_path: str, model_name: str = "gpt-4-vision-previe
             "content": (
                 "You are a LaTeX transcription assistant specializing in chemistry and physics.\n"
                 "Your output MUST contain two parts:\n"
-                "1. A *complete* LaTeX document, starting with `\\documentclass{article}` and ending with `\\end{document}`, wrapped in a single ```latex ... ``` code block. This block MUST contain placeholders (`STRUCTURE-N`, `DIAGRAM-M`) as specified below.\n"
+                "1. A *complete* LaTeX document, starting with `\documentclass{article}` and ending with `\end{document}`, wrapped in a single ```latex ... ``` code block. This block MUST contain placeholders (`STRUCTURE-N`, `DIAGRAM-M`) as specified below.\n"
                 "2. After the closing ``` of the LaTeX block, a list of descriptions for EACH placeholder used. Use the exact format:\n"
                 "Placeholder: [Placeholder Name (e.g., STRUCTURE-1)]\nDescription: [Concise textual description]\n"
                 "(Repeat for each placeholder, ensuring each description starts on a new line immediately after 'Description: ')\n\n"
                 "LaTeX Content Rules:\n"
                 "1. Include packages: `amsmath`, `graphicx`, `amssymb`, `mhchem`, `chemfig`.\n"
-                "2. Transcribe standard text, equations (use math environments), and symbols accurately.\n"
-                "3. **Chemical Structures/Reactions:** For handwritten molecular drawings or reaction schemes that are part of an equation or text flow:\n"
+                "2. Include the author command: `\author{ramakrishna}` after the `\usepackage` commands.\n"
+                "3. Transcribe standard text, equations (use math environments), and symbols accurately.\n"
+                "4. **Chemical Structures/Reactions:** For handwritten molecular drawings or reaction schemes that are part of an equation or text flow:\n"
                 "   - Replace the structure/scheme with a LaTeX comment placeholder: `% PLACEHOLDER: STRUCTURE-N` (start N at 1).\n"
                 "   - Insert this comment placeholder *inline* within the math environment or text where the structure was.\n"
-                "   - Do NOT use `chemfig`, `\\ce{}`, or the raw label (STRUCTURE-N) directly; use the comment placeholder.\n"
-                "4. **General Diagrams:** For graphs, plots, illustrations, flowcharts, etc. NOT inline:\n"
+                "   - Do NOT use `chemfig`, `\ce{}`, or the raw label (STRUCTURE-N) directly; use the comment placeholder.\n"
+                "5. **General Diagrams:** For graphs, plots, illustrations, flowcharts, etc. NOT inline:\n"
                 "   - On a line *by itself*, write exactly `% PLACEHOLDER: DIAGRAM-M` (start M at 1).\n"
                 "   - Do NOT insert the raw label (DIAGRAM-M) directly.\n"
-                "5. Numbering: Use separate counters for STRUCTURE-N and DIAGRAM-M (within the placeholders and descriptions).\n"
-                "6. Do NOT generate TikZ or PGFPlots.\n"
+                "6. Numbering: Use separate counters for STRUCTURE-N and DIAGRAM-M (within the placeholders and descriptions).\n"
+                "7. Do NOT generate TikZ or PGFPlots.\n"
                 "If you violate the output format or rules, the answer will be discarded."
             )
         },
@@ -92,25 +94,26 @@ def get_latex_from_image(image_path: str, model_name: str = "gpt-4-vision-previe
             "role": "assistant",
             "content": (
                 "```latex\n"
-                "\\documentclass{article}\n"
-                "\\usepackage{amsmath}\n"
-                "\\usepackage{graphicx}\n"
-                "\\usepackage{amssymb}\n"
-                "\\usepackage{mhchem}\n"
-                "\\usepackage{chemfig}\n"
+                "\documentclass{article}\n"
+                "\usepackage{amsmath}\n"
+                "\usepackage{graphicx}\n"
+                "\usepackage{amssymb}\n"
+                "\usepackage{mhchem}\n"
+                "\usepackage{chemfig}\n"
+                "\author{ramakrishna}\n"
                 "\n"
-                "\\begin{document}\n"
+                "\begin{document}\n"
                 "\n"
                 "The reaction is:\n"
-                "\\[\n"
-                "\\ce{ReactantA} + % PLACEHOLDER: STRUCTURE-1 \\longrightarrow % PLACEHOLDER: STRUCTURE-2 + \\ce{SideProductB}\n"
-                "\\]\n"
+                "\[\n"
+                "\ce{ReactantA} + % PLACEHOLDER: STRUCTURE-1 \longrightarrow % PLACEHOLDER: STRUCTURE-2 + \ce{SideProductB}\n"
+                "\]\n"
                 "\n"
                 "% PLACEHOLDER: DIAGRAM-1\n"
                 "\n"
                 "Final energy is $E = mc^2$.\n"
                 "\n"
-                "\\end{document}\n"
+                "\end{document}\n"
                 "```\n"
                 "Placeholder: STRUCTURE-1\nDescription: Benzene ring with a methyl group.\n"
                 "Placeholder: STRUCTURE-2\nDescription: Cyclohexane molecule.\n"
@@ -125,7 +128,7 @@ def get_latex_from_image(image_path: str, model_name: str = "gpt-4-vision-previe
                 {
                     "type": "text",
                     "text": (
-                        "Convert the handwritten content. First, provide the complete LaTeX document in a ```latex block, using `% PLACEHOLDER: STRUCTURE-N` comment placeholders inline for chemical structures/reactions and `% PLACEHOLDER: DIAGRAM-M` comment placeholders on their own lines for standalone diagrams. "
+                        "Convert the handwritten content. First, provide the complete LaTeX document in a ```latex block, using `% PLACEHOLDER: STRUCTURE-N` comment placeholders inline for chemical structures/reactions and `% PLACEHOLDER: DIAGRAM-M` comment placeholders on their own lines for standalone diagrams. Include \author{ramakrishna}. "
                         "Second, after the ```latex block, list descriptions for every placeholder used, following the 'Placeholder: ...\nDescription: ...' format exactly. Adhere strictly to all system rules."
                     )
                 },
@@ -136,42 +139,48 @@ def get_latex_from_image(image_path: str, model_name: str = "gpt-4-vision-previe
             ]
         }
     ],
-
 )
-
 
         # 5. Process Response & Extract LaTeX
         raw_content = response.choices[0].message.content
         print(f"OpenAI API call successful for model {model_name}.")
 
         latex_content = ""
-        descriptions_text = "" # Store the description part separately
+        descriptions_text = "" 
 
-        # Find the LaTeX block first
         match_latex = re.search(r"```(latex)?\s*(.*?)\s*```", raw_content, re.DOTALL | re.IGNORECASE)
         if match_latex:
             latex_content = match_latex.group(2).strip()
             print("Extracted LaTeX content using ``` block.")
-            # Look for the description part *after* the LaTeX block
-            description_start_index = match_latex.end() # Index right after the closing ```
+            description_start_index = match_latex.end() 
             descriptions_text = raw_content[description_start_index:].strip()
-            print(f"Extracted potential descriptions part: '{descriptions_text[:100]}...'" ) # Print start of description text
+            print(f"Extracted potential descriptions part: '{descriptions_text[:100]}...'" ) 
         else:
             print("Warning: Could not find the expected ```latex ... ``` block. Cannot process.")
-            # If we can't find the latex block, we probably can't reliably find descriptions either.
-            # Consider returning an error or the dummy output depending on desired robustness.
             raise ValueError("Failed to parse VLM response: LaTeX block not found.")
 
-        # Basic validation: Check if it looks like a LaTeX doc start
-        if latex_content and not latex_content.startswith("\\documentclass"):
-            print("Warning: Extracted LaTeX content doesn't start with \\documentclass. May be incomplete.")
+        if latex_content and not latex_content.startswith("\documentclass"):
+            print("Warning: Extracted LaTeX content doesn't start with \documentclass. May be incomplete.")
+        
+        # Ensure author is present if somehow missed by the model
+        if latex_content and "\author" not in latex_content:
+            print("Warning: \author command missing from generated LaTeX. Adding default.")
+            # Attempt to insert after usepackage block or after documentclass
+            lines = latex_content.split('\n')
+            insert_pos = -1
+            for i, line in enumerate(lines):
+                if line.strip().startswith("\usepackage"):
+                    insert_pos = i + 1 # Mark position after the last usepackage
+                elif line.strip().startswith("\documentclass") and insert_pos == -1:
+                     insert_pos = i + 1 # Fallback to after documentclass
+            if insert_pos != -1:
+                lines.insert(insert_pos, "\author{ramakrishna}")
+                latex_content = "\n".join(lines)
+            else:
+                 # Failsafe: Prepend if no suitable insertion point found
+                 latex_content = "\author{ramakrishna}\n" + latex_content
 
-        # --- Placeholder Extraction & Description Parsing (Moved to Backend Processing Step) ---
-        # This function should now return BOTH latex_content and descriptions_text
-        # The caller (likely in tasks.py) will handle parsing the descriptions_text
-        # and storing the mapping.
 
-        # We return both parts now
         return latex_content, descriptions_text
 
     except FileNotFoundError:
