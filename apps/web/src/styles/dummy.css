@@ -1,0 +1,50 @@
+/* Dummy CSS file for styling defaults */
+
+/* Custom variables */
+:root {
+  --dummy-primary: #3498db;
+  --dummy-secondary: #2ecc71;
+  --dummy-accent: #e74c3c;
+  --dummy-text: #333333;
+  --dummy-background: #f5f5f5;
+  --dummy-spacing: 1rem;
+  --dummy-radius: 4px;
+}
+
+/* Utility classes */
+.dummy-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--dummy-spacing);
+}
+
+.dummy-btn {
+  background-color: var(--dummy-primary);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: var(--dummy-radius);
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.dummy-btn:hover {
+  background-color: color-mix(in oklch, var(--dummy-primary), black 10%);
+}
+
+.dummy-card {
+  background-color: white;
+  border-radius: var(--dummy-radius);
+  padding: var(--dummy-spacing);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Animation example */
+@keyframes dummy-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.dummy-fade-in {
+  animation: dummy-fade 0.5s ease-in-out;
+} 
