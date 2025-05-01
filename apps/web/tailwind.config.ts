@@ -2,10 +2,9 @@ import type { Config } from 'tailwindcss'
 
 const config: Config = {
   content: [
-    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
-    // Add any other directories where you use Tailwind classes
+    './apps/web/src/app/**/*.{js,ts,jsx,tsx,mdx}',
+    './apps/web/src/components/**/*.{js,ts,jsx,tsx,mdx}',
+    './apps/web/src/pages/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
     extend: {
@@ -21,4 +20,4 @@ const config: Config = {
     // Add any Tailwind plugins here (e.g., require('@tailwindcss/typography'))
   ],
 }
-export default config 
+export default config
