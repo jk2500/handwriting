@@ -315,7 +315,7 @@ export default function SegmentationPage() {
             
             if (statusResponse.ok) {
                 toast.success("Job marked as segmentation complete");
-                router.push(`/jobs/${jobId}`);
+                router.push(`/jobs`);
             }
         } catch (error: any) {
             toast.error(`Error saving segmentations: ${error.message}`);
@@ -411,7 +411,7 @@ export default function SegmentationPage() {
 
     return (
         <main className="container mx-auto p-4 font-[family-name:var(--font-geist-sans)]">
-            <Link href={`/jobs/${jobId}`} className="text-blue-600 hover:underline mb-4 inline-block">&larr; Back to Job Details</Link>
+            <Link href="/jobs" className="text-blue-600 hover:underline mb-4 inline-block">&larr; Back to Jobs</Link>
 
             <h1 className="text-2xl font-bold mb-4">Perform Segmentation</h1>
             <p className="mb-4 text-sm text-gray-500">Job ID: {jobId}</p>
