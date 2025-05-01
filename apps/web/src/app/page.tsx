@@ -198,7 +198,7 @@ export default function Home() {
                         
                         {/* Segmentation Button - only show when awaiting segmentation */}
                         {canSegment && (
-                          <Link href={`/segment/${job.id}`} passHref legacyBehavior>
+                          <Link href={`/jobs/${job.id}/segment`} passHref legacyBehavior>
                             <Button
                               asChild
                               variant="default"

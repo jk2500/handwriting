@@ -137,6 +137,24 @@ def get_page_images(job_id: uuid.UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail="Error retrieving page image information.")
     return schemas.JobPageImagesResponse(job_id=job.id, pages=page_image_infos)
 
+@router.get("/{job_id}/segmentations", response_model=List[schemas.Segmentation], tags=["Jobs", "Segmentations"])
+async def get_segmentations(job_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Retrieves existing segmentation bounding boxes for a specific job."""
+    db_job = db.query(models.Job).filter(models.Job.id == job_id).first()
+    if db_job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found")
+
+    # Query the Segmentation table directly
+    segmentations = db.query(models.Segmentation).filter(models.Segmentation.job_id == job_id).all()
+
+    # The response_model=List[schemas.Segmentation] handles the serialization
+    # Pydantic will automatically convert the list of models.Segmentation objects
+    # into the structure expected by schemas.Segmentation.
+    if not segmentations:
+        return [] # Return empty list if none found, not an error
+
+    return segmentations
+
 @router.post("/{job_id}/segmentations", response_model=List[schemas.Segmentation], status_code=status.HTTP_201_CREATED, tags=["Jobs", "Segmentations"])
 async def create_segmentations(job_id: uuid.UUID, segmentations_in: List[schemas.SegmentationCreate], db: Session = Depends(get_db)):
     db_job = db.query(models.Job).filter(models.Job.id == job_id).first()

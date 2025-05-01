@@ -311,15 +311,15 @@ export default function JobsPage() {
                           </Button>
                         )}
                         
-                        {/* Segmentation Button - only show when awaiting segmentation */}
+                        {/* Segmentation Button */}
                         {canSegment && (
-                          <Link href={`/segment/${job.id}`} passHref legacyBehavior>
+                          <Link href={`/jobs/${job.id}/segment`} passHref legacyBehavior>
                             <Button
                               asChild
                               variant="default"
                               size="sm"
                               title="Segment this job"
-                              className="gap-1 button-hover-effect"
+                              className="gap-1"
                             >
                               <a>
                                 <Scissors className="h-3.5 w-3.5" />
