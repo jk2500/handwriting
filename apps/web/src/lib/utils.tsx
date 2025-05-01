@@ -1,6 +1,7 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { FileText, FileType, Scissors, PlayCircle, Clock, AlertCircle, CheckCircle } from "lucide-react";
+import React from 'react';
 
 // Common constant for API URL
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -28,6 +29,40 @@ export const formatDate = (dateString: string | null) => {
     return new Date(dateString).toLocaleString();
   } catch (e) {
     return 'Invalid Date';
+  }
+};
+
+// Convert technical status to user-friendly display name
+export const getStatusDisplayName = (status: string): string => {
+  switch (status) {
+    case 'pending':
+      return 'Pending';
+    case 'rendering':
+      return 'Processing Input';
+    case 'processing_vlm':
+      return 'OCR Processing';
+    case 'awaiting_segmentation':
+      return 'Ready for Segmentation';
+    case 'segmentation_complete':
+      return 'Segmentation Complete';
+    case 'compilation_pending':
+      return 'Compiling';
+    case 'compilation_complete':
+      return 'Complete';
+    case 'completed':
+      return 'Complete';
+    case 'failed':
+      return 'Failed';
+    case 'compilation_failed':
+      return 'Compilation Failed';
+    case 'refinement_in_progress':
+      return 'Refining';
+    case 'refinement_complete':
+      return 'Refinement Complete';
+    case 'refinement_failed':
+      return 'Refinement Failed';
+    default:
+      return status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
 };
 

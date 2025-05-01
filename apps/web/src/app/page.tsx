@@ -13,86 +13,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FileText, FileType, Scissors, PlayCircle, Clock, AlertCircle, CheckCircle, ChevronRight } from "lucide-react";
+import { FileText, FileType, Scissors, PlayCircle, ChevronRight, AlertCircle } from "lucide-react";
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-
-interface Job {
-  id: string;
-  input_pdf_filename: string;
-  status: string; // Should match JobStatus enum values from backend
-  created_at: string;
-  updated_at: string | null;
-  completed_at: string | null;
-  error_message: string | null;
-  // Add other relevant fields from backend Job model if needed
-  initial_tex_s3_path: string | null;
-  final_tex_s3_path: string | null;
-  final_pdf_s3_path: string | null;
-  segmentation_tasks: Record<string, string> | null; // Assuming JSON object {placeholder: description}
-}
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
-// Helper to format date strings
-const formatDate = (dateString: string | null) => {
-  if (!dateString) return 'N/A';
-  try {
-    return new Date(dateString).toLocaleString();
-  } catch (e) {
-    return 'Invalid Date';
-  }
-};
-
-// Helper to get status color (using Tailwind classes)
-const getStatusClass = (status: string): string => {
-  switch (status) {
-    case 'pending': return 'text-muted-foreground';
-    case 'rendering':
-    case 'processing_vlm':
-    case 'compilation_pending':
-    case 'refinement_in_progress': // Future
-      return 'text-blue-500 font-semibold';
-    case 'awaiting_segmentation': return 'text-yellow-600 font-semibold';
-    case 'segmentation_complete': return 'text-purple-500 font-semibold';
-    case 'compilation_complete':
-    case 'completed':
-    case 'refinement_complete': // Future
-      return 'text-green-600 font-semibold';
-    case 'failed':
-    case 'compilation_failed':
-    case 'refinement_failed': // Future
-      return 'text-red-600 font-semibold';
-    default: return 'text-foreground';
-  }
-};
-
-// Helper to get status icon
-const StatusIcon = ({ status }: { status: string }) => {
-  switch (status) {
-    case 'pending':
-      return <Clock className="h-4 w-4 text-muted-foreground" />;
-    case 'rendering':
-    case 'processing_vlm':
-    case 'compilation_pending':
-    case 'refinement_in_progress':
-      return <Clock className="h-4 w-4 text-blue-500 animate-pulse" />;
-    case 'awaiting_segmentation':
-      return <Scissors className="h-4 w-4 text-yellow-600" />;
-    case 'segmentation_complete':
-      return <CheckCircle className="h-4 w-4 text-purple-500" />;
-    case 'compilation_complete':
-    case 'completed':
-    case 'refinement_complete':
-      return <CheckCircle className="h-4 w-4 text-green-600" />;
-    case 'failed':
-    case 'compilation_failed':
-    case 'refinement_failed':
-      return <AlertCircle className="h-4 w-4 text-red-600" />;
-    default:
-      return <Clock className="h-4 w-4" />;
-  }
-};
+import { 
+  API_BASE_URL, 
+  type Job, 
+  formatDate, 
+  getButtonVisibility,
+} from '@/lib/utils';
+import { getStatusDisplayName, getStatusClass, getStatusIcon } from '@/lib/statusUtils';
 
 export default function Home() {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -150,6 +80,9 @@ export default function Home() {
       toast.error(`Failed to trigger compilation: ${e.message}`, { id: toastId });
     }
   };
+
+  // Use the status icon from utility
+  const StatusIcon = ({ status }: { status: string }) => getStatusIcon(status);
 
   return (
     <div className="container mx-auto px-4 py-8 page-animation">
@@ -210,6 +143,7 @@ export default function Home() {
                 <TableHead className="w-[250px]">Filename</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Created</TableHead>
+                <TableHead>Model</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -222,11 +156,14 @@ export default function Home() {
                 </TableRow>
               ) : (
                 recentJobs.map((job) => {
-                  const canDownloadTex = !['pending', 'rendering', 'processing_vlm', 'failed'].includes(job.status);
-                  const canDownloadPdf = job.status === 'compilation_complete';
-                  const canSegment = ['awaiting_segmentation', 'segmentation_complete'].includes(job.status);
-                  const canCompile = canSegment;
-
+                  const { 
+                    canDownloadInitialTex,
+                    canDownloadFinalTex,
+                    canDownloadPdf,
+                    canSegment,
+                    canCompile
+                  } = getButtonVisibility(job);
+                  
                   return (
                     <TableRow key={job.id} className="hover:bg-muted/40 transition-colors">
                       <TableCell className="font-medium truncate max-w-[250px]" title={job.input_pdf_filename || 'N/A'}>
@@ -235,60 +172,87 @@ export default function Home() {
                       <TableCell>
                         <div className="flex items-center gap-1.5">
                           <StatusIcon status={job.status} />
-                          <span className={getStatusClass(job.status)}>{job.status}</span>
+                          <span className={getStatusClass(job.status)}>
+                            {getStatusDisplayName(job.status)}
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell>{formatDate(job.created_at)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{job.model_used || 'N/A'}</TableCell>
                       <TableCell className="text-right space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={!canDownloadTex}
-                          onClick={() => canDownloadTex && window.open(`${API_BASE_URL}/jobs/${job.id}/tex`, '_blank')}
-                          title={canDownloadTex ? "Download TeX file" : "TeX file not available"}
-                          className="gap-1 button-hover-effect"
-                        >
-                          <FileText className="h-3.5 w-3.5" />
-                          <span>TeX</span>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={!canDownloadPdf}
-                          onClick={() => canDownloadPdf && window.open(`${API_BASE_URL}/jobs/${job.id}/pdf`, '_blank')}
-                          title={canDownloadPdf ? "Download PDF file" : "PDF file not available"}
-                          className="gap-1 button-hover-effect"
-                        >
-                          <FileType className="h-3.5 w-3.5" />
-                          <span>PDF</span>
-                        </Button>
-                        <Link href={canSegment ? `/segment/${job.id}` : '#'} passHref legacyBehavior>
+                        {/* Initial TeX Button - only show after initial processing */}
+                        {canDownloadInitialTex && (
                           <Button
-                            asChild
-                            variant="default"
+                            variant="outline"
                             size="sm"
-                            disabled={!canSegment}
-                            aria-disabled={!canSegment}
-                            title={canSegment ? "Segment this job" : "Segmentation not available"}
+                            onClick={() => window.open(`${API_BASE_URL}/jobs/${job.id}/tex`, '_blank')}
+                            title="Download initial TeX file"
                             className="gap-1 button-hover-effect"
                           >
-                            <a>
-                              <Scissors className="h-3.5 w-3.5" />
-                              <span>Segment</span>
-                            </a>
+                            <FileText className="h-3.5 w-3.5" />
+                            <span>TeX</span>
                           </Button>
-                        </Link>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          disabled={!canCompile}
-                          onClick={() => handleCompile(job.id)}
-                          title={canCompile ? "Compile segmented document" : "Compilation not available"}
-                          className="gap-1 button-hover-effect"
-                        >
-                          <PlayCircle className="h-3.5 w-3.5" />
-                          <span>Compile</span>
-                        </Button>
+                        )}
+                        
+                        {/* Segmentation Button - only show when awaiting segmentation */}
+                        {canSegment && (
+                          <Link href={`/segment/${job.id}`} passHref legacyBehavior>
+                            <Button
+                              asChild
+                              variant="default"
+                              size="sm"
+                              title="Segment this job"
+                              className="gap-1 button-hover-effect"
+                            >
+                              <a>
+                                <Scissors className="h-3.5 w-3.5" />
+                                <span>Segment</span>
+                              </a>
+                            </Button>
+                          </Link>
+                        )}
+                        
+                        {/* Compile Button - only show after segmentation is complete */}
+                        {canCompile && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleCompile(job.id)}
+                            title="Compile segmented document"
+                            className="gap-1 button-hover-effect"
+                          >
+                            <PlayCircle className="h-3.5 w-3.5" />
+                            <span>Compile</span>
+                          </Button>
+                        )}
+                        
+                        {/* Final TeX Button - only show after compilation */}
+                        {canDownloadFinalTex && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(`${API_BASE_URL}/jobs/${job.id}/final-tex`, '_blank')}
+                            title="Download final TeX file"
+                            className="gap-1 button-hover-effect"
+                          >
+                            <FileText className="h-3.5 w-3.5" />
+                            <span>Final TeX</span>
+                          </Button>
+                        )}
+                        
+                        {/* PDF Button - only show after compilation */}
+                        {canDownloadPdf && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(`${API_BASE_URL}/jobs/${job.id}/pdf`, '_blank')}
+                            title="Download PDF file"
+                            className="gap-1 button-hover-effect"
+                          >
+                            <FileType className="h-3.5 w-3.5" />
+                            <span>PDF</span>
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   );
