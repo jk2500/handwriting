@@ -200,12 +200,22 @@ def process_handwriting_conversion(self, job_id_str: str):
         # End of temp_dir block
         print(f"Job {job_id}: Temporary directory {temp_dir} cleaned up.")
 
-        # Set final status for this task
-        job.status = models.JobStatus.AWAITING_SEGMENTATION # New final status for this phase
+        # Set final status based on whether segmentation is required
+        if not job.segmentation_tasks:
+            # No tasks found, segmentation is implicitly complete
+            job.status = models.JobStatus.SEGMENTATION_COMPLETE
+            print(f"Job {job_id}: No segmentation tasks found. Status set to SEGMENTATION_COMPLETE")
+            final_message = f"Job {job_id} initial processing completed successfully. No segmentation needed."
+        else:
+            # Tasks exist, awaiting user segmentation
+            job.status = models.JobStatus.AWAITING_SEGMENTATION # Keep existing final status for this phase
+            print(f"Job {job_id}: Segmentation tasks found. Status set to AWAITING_SEGMENTATION")
+            final_message = f"Job {job_id} initial processing completed successfully. Awaiting segmentation."
+            
         job.updated_at = datetime.datetime.now(datetime.timezone.utc) # Update timestamp
         db.commit()
-        print(f"Job {job_id}: Status set to AWAITING_SEGMENTATION")
-        return f"Job {job_id} initial processing completed successfully. Awaiting segmentation."
+        # print(f"Job {job_id}: Status set to AWAITING_SEGMENTATION") # Removed old log
+        return final_message # Use dynamic message
 
     except Exception as e:
         print(f"Error during task for job {job_id}: {e}")
