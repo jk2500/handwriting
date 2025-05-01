@@ -8,6 +8,16 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import Konva from 'konva';
 import { API_BASE_URL } from '@/lib/utils';
+import { 
+  ChevronLeftIcon, 
+  ChevronRightIcon, 
+  ArrowLeftIcon, 
+  CheckCircleIcon, 
+  TrashIcon,
+  PenToolIcon,
+  AlertCircle
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 // Dynamically import react-konva components with ssr: false
 const Stage = dynamic(() => import('react-konva').then((mod) => mod.Stage), { ssr: false });
@@ -55,9 +65,25 @@ export default function SegmentationPage() {
     const [imageObj, setImageObj] = useState<HTMLImageElement | null>(null);
     const [isSaving, setIsSaving] = useState<boolean>(false);
     const [completedTasks, setCompletedTasks] = useState<Set<string>>(new Set());
+    const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
 
     const containerRef = useRef<HTMLDivElement>(null);
     const stageRef = useRef<Konva.Stage>(null);
+
+    // Detect dark mode
+    useEffect(() => {
+        // Check if dark mode is enabled initially
+        setIsDarkMode(window.matchMedia('(prefers-color-scheme: dark)').matches);
+        
+        // Listen for changes
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        const handleChange = (e: MediaQueryListEvent) => {
+            setIsDarkMode(e.matches);
+        };
+        
+        mediaQuery.addEventListener('change', handleChange);
+        return () => mediaQuery.removeEventListener('change', handleChange);
+    }, []);
 
     // Initialize and fetch data
     useEffect(() => {
@@ -186,7 +212,7 @@ export default function SegmentationPage() {
         };
     }, [imageObj]);
 
-    // Drawing handlers
+    // Drawing handlers - with proper type handling
     const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
         if (!segmentationTasks[currentTaskIndex]) return;
         
@@ -274,6 +300,43 @@ export default function SegmentationPage() {
         setNewBox(null);
     };
 
+    // Touch event handlers
+    const handleTouchStart = (e: Konva.KonvaEventObject<TouchEvent>) => {
+        if (!segmentationTasks[currentTaskIndex]) return;
+        
+        const pos = e.target.getStage()?.getPointerPosition();
+        if (!pos) return;
+        
+        setIsDrawing(true);
+        const { x, y } = pos;
+        setNewBox({
+            x,
+            y,
+            width: 0,
+            height: 0,
+            label: segmentationTasks[currentTaskIndex].placeholder,
+            pageNumber: pageImages[currentPageIndex].page_number
+        });
+    };
+
+    const handleTouchMove = (e: Konva.KonvaEventObject<TouchEvent>) => {
+        if (!isDrawing || !newBox) return;
+        
+        const pos = e.target.getStage()?.getPointerPosition();
+        if (!pos) return;
+        
+        const { x, y } = pos;
+        setNewBox({
+            ...newBox,
+            width: x - (newBox.x || 0),
+            height: y - (newBox.y || 0)
+        });
+    };
+
+    const handleTouchEnd = () => {
+        handleMouseUp(); // Reuse the same logic for touch end
+    };
+
     // Save segmentations to API
     const saveSegmentations = async () => {
         if (boundingBoxes.length === 0) {
@@ -313,13 +376,26 @@ export default function SegmentationPage() {
                 method: 'POST'
             });
             
-            if (statusResponse.ok) {
-                toast.success("Job marked as segmentation complete");
+            if (!statusResponse.ok) {
+                throw new Error("Failed to update job status");
+            }
+            
+            toast.success("Job marked as segmentation complete");
+            
+            // Trigger compilation
+            const compileResponse = await fetch(`${API_BASE_URL}/jobs/${jobId}/compile`, {
+                method: 'POST'
+            });
+            
+            if (compileResponse.ok) {
+                toast.success("Compilation process started");
                 router.push(`/jobs`);
+            } else {
+                throw new Error("Failed to trigger compilation");
             }
         } catch (error: any) {
-            toast.error(`Error saving segmentations: ${error.message}`);
-            console.error("Save error:", error);
+            toast.error(`Error: ${error.message}`);
+            console.error("Save/compile error:", error);
         } finally {
             setIsSaving(false);
         }
@@ -360,6 +436,31 @@ export default function SegmentationPage() {
         toast.info(`Removed bounding box for ${removedBox.label}`);
     };
 
+    // Get Konva colors based on theme
+    const getKonvaColors = () => {
+        if (isDarkMode) {
+            return {
+                boxFill: "rgba(99, 102, 241, 0.3)",
+                boxStroke: "rgba(129, 140, 248, 0.9)",
+                newBoxFill: "rgba(248, 113, 113, 0.3)",
+                newBoxStroke: "rgba(248, 113, 113, 0.9)",
+                textFill: "#ffffff",
+                textBackground: "rgba(99, 102, 241, 0.8)"
+            };
+        } else {
+            return {
+                boxFill: "rgba(79, 70, 229, 0.2)",
+                boxStroke: "rgba(79, 70, 229, 0.9)",
+                newBoxFill: "rgba(239, 68, 68, 0.2)",
+                newBoxStroke: "rgba(239, 68, 68, 0.9)",
+                textFill: "#ffffff",
+                textBackground: "rgba(79, 70, 229, 0.8)"
+            };
+        }
+    };
+
+    const konvaColors = getKonvaColors();
+
     // Render visual elements
     const renderBoxes = () => {
         // Show relative bounding boxes (0-1) scaled to current stage size
@@ -372,20 +473,24 @@ export default function SegmentationPage() {
                         y={box.y * stageSize.height}
                         width={box.width * stageSize.width}
                         height={box.height * stageSize.height}
-                        fill="rgba(0, 150, 255, 0.1)"
-                        stroke="rgba(0, 150, 255, 0.8)"
+                        fill={konvaColors.boxFill}
+                        stroke={konvaColors.boxStroke}
                         strokeWidth={2}
                         onClick={() => removeBoundingBox(i)}
                         onTap={() => removeBoundingBox(i)}
                         perfectDrawEnabled={false}
+                        cornerRadius={4}
                     />
                     <Text
                         x={(box.x + 0.01) * stageSize.width}
                         y={(box.y + 0.01) * stageSize.height}
                         text={box.label}
                         fontSize={14}
-                        fill="#0066cc"
+                        fill={konvaColors.textFill}
+                        padding={3}
+                        background={konvaColors.textBackground}
                         perfectDrawEnabled={false}
+                        cornerRadius={2}
                     />
                 </React.Fragment>
             ));
@@ -401,142 +506,257 @@ export default function SegmentationPage() {
                 y={newBox.y}
                 width={newBox.width}
                 height={newBox.height}
-                fill="rgba(255, 0, 0, 0.1)"
-                stroke="rgba(255, 0, 0, 0.8)"
+                fill={konvaColors.newBoxFill}
+                stroke={konvaColors.newBoxStroke}
                 strokeWidth={2}
                 perfectDrawEnabled={false}
+                dash={[5, 5]}
+                cornerRadius={4}
             />
         );
     };
 
+    // Calculate completion percentage
+    const completionPercentage = segmentationTasks.length > 0 
+        ? Math.round((completedTasks.size / segmentationTasks.length) * 100) 
+        : 0;
+
     return (
-        <main className="container mx-auto p-4 font-[family-name:var(--font-geist-sans)]">
-            <Link href="/jobs" className="text-blue-600 hover:underline mb-4 inline-block">&larr; Back to Jobs</Link>
+        <div className="container mx-auto px-4 py-8 page-animation">
+            <div className="mb-8">
+                <Link href="/jobs" className="text-primary hover:text-primary/80 flex items-center gap-1 mb-4">
+                    <ArrowLeftIcon size={16} />
+                    <span>Back to Jobs</span>
+                </Link>
+                
+                <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                    Document Segmentation
+                </h1>
+                <p className="text-muted-foreground">
+                    Job ID: {jobId}
+                </p>
+            </div>
 
-            <h1 className="text-2xl font-bold mb-4">Perform Segmentation</h1>
-            <p className="mb-4 text-sm text-gray-500">Job ID: {jobId}</p>
-
-            {loading && <p>Loading segmentation data...</p>}
-            {error && <p className="text-red-500">Error: {error}</p>}
-
-            {!loading && !error && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Column 1: Task List */} 
-                    <div className="md:col-span-1 border rounded-lg p-4 overflow-y-auto h-[70vh]">
-                        <h2 className="text-lg font-semibold mb-3">Segmentation Tasks</h2>
-                        {segmentationTasks.length > 0 ? (
-                            <ul>
-                                {segmentationTasks.map((task, index) => (
-                                    <li 
-                                        key={index} 
-                                        className={`mb-3 p-2 border rounded cursor-pointer transition-colors
-                                            ${index === currentTaskIndex ? 'bg-purple-100 border-purple-300' : 'hover:bg-gray-100'}
-                                            ${completedTasks.has(task.placeholder) ? 'border-green-300' : ''}`}
-                                        onClick={() => selectTask(index)}
-                                    >
-                                        <div className="flex justify-between">
-                                            <strong className="text-purple-700">{task.placeholder}</strong>
-                                            {completedTasks.has(task.placeholder) && (
-                                                <span className="text-green-600 text-sm">✓ Done</span>
-                                            )}
-                                        </div>
-                                        <p className="text-sm text-gray-600 mt-1">{task.description}</p>
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : (
-                            <p className="text-gray-500">No segmentation tasks found for this job.</p>
-                        )}
-                        
-                        <div className="mt-6">
-                            <Button 
-                                onClick={saveSegmentations} 
-                                disabled={boundingBoxes.length === 0 || isSaving}
-                                className="w-full bg-green-600 hover:bg-green-700 text-white"
-                            >
-                                {isSaving ? 'Saving...' : 'Save All Segmentations'}
-                            </Button>
-                            
-                            <p className="text-xs text-gray-500 mt-2">
-                                {completedTasks.size} of {segmentationTasks.length} tasks completed
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Column 2: Image Viewer & Annotation Area */} 
-                    <div className="md:col-span-2 border rounded-lg p-4 h-[70vh] flex flex-col">
-                        <div className="flex justify-between items-center mb-3">
-                            <h2 className="text-lg font-semibold">Page Viewer / Annotation</h2>
-                            <div className="flex items-center gap-2">
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={goToPrevPage}
-                                    disabled={currentPageIndex === 0}
-                                >
-                                    Previous Page
-                                </Button>
-                                <span>
-                                    Page {currentPageIndex + 1} of {pageImages.length}
-                                </span>
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={goToNextPage}
-                                    disabled={currentPageIndex >= pageImages.length - 1}
-                                >
-                                    Next Page
-                                </Button>
-                            </div>
-                        </div>
-                        
-                        <div className="flex-grow bg-gray-100 overflow-hidden" ref={containerRef}>
-                            {pageImages.length > 0 && imageObj ? (
-                                <div className="h-full w-full flex justify-center items-center">
-                                    <Stage
-                                        ref={stageRef}
-                                        width={stageSize.width}
-                                        height={stageSize.height}
-                                        onMouseDown={handleMouseDown}
-                                        onMouseMove={handleMouseMove}
-                                        onMouseUp={handleMouseUp}
-                                        onTouchStart={handleMouseDown}
-                                        onTouchMove={handleMouseMove}
-                                        onTouchEnd={handleMouseUp}
-                                    >
-                                        <Layer>
-                                            <KonvaImage
-                                                image={imageObj}
-                                                width={stageSize.width}
-                                                height={stageSize.height}
-                                                perfectDrawEnabled={false}
-                                            />
-                                            {renderBoxes()}
-                                            {renderNewBox()}
-                                        </Layer>
-                                    </Stage>
-                                </div>
-                            ) : (
-                                <p className="text-gray-500 flex justify-center items-center h-full">
-                                    No page images found.
-                                </p>
-                            )}
-                        </div>
-                        
-                        <div className="mt-4 bg-yellow-50 p-3 rounded-lg">
-                            <p className="text-sm font-medium">
-                                Drawing: {segmentationTasks[currentTaskIndex]?.placeholder || 'No task selected'}
-                            </p>
-                            <p className="text-xs text-gray-600 mt-1">
-                                {segmentationTasks[currentTaskIndex]?.description || ''}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-2">
-                                Click and drag to draw a box. Click on a box to remove it.
-                            </p>
-                        </div>
+            {loading && (
+                <div className="flex justify-center items-center p-12">
+                    <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                </div>
+            )}
+            
+            {error && (
+                <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg p-4 my-6 flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                    <div>
+                        <h3 className="font-medium">Error loading segmentation data</h3>
+                        <p className="text-sm">{error}</p>
                     </div>
                 </div>
             )}
-        </main>
+
+            {!loading && !error && (
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    {/* Column 1: Task List */} 
+                    <div className="lg:col-span-1">
+                        <Card className="overflow-hidden h-full">
+                            <CardHeader className="bg-muted/50 pb-3">
+                                <CardTitle className="flex items-center gap-2">
+                                    <CheckCircleIcon size={18} className="text-primary" />
+                                    Segmentation Tasks
+                                </CardTitle>
+                            </CardHeader>
+                            
+                            <CardContent className="p-0">
+                                <div className="p-4 max-h-[60vh] overflow-y-auto">
+                                    {segmentationTasks.length > 0 ? (
+                                        <ul className="space-y-3">
+                                            {segmentationTasks.map((task, index) => {
+                                                const isCompleted = completedTasks.has(task.placeholder);
+                                                const isActive = index === currentTaskIndex;
+                                                
+                                                return (
+                                                    <li 
+                                                        key={index} 
+                                                        className={`
+                                                            p-3 rounded-lg cursor-pointer transition-all duration-200
+                                                            ${isActive 
+                                                                ? 'bg-primary/10 border border-primary/20 shadow-sm' 
+                                                                : 'bg-card border border-border hover:border-primary/20 hover:bg-primary/5'
+                                                            }
+                                                            ${isCompleted ? 'border-green-200 dark:border-green-900' : ''}
+                                                        `}
+                                                        onClick={() => selectTask(index)}
+                                                    >
+                                                        <div className="flex justify-between items-start">
+                                                            <div className="flex items-start gap-2">
+                                                                {isCompleted ? (
+                                                                    <CheckCircleIcon size={18} className="text-green-600 dark:text-green-500 mt-0.5" />
+                                                                ) : (
+                                                                    <div className={`w-4 h-4 rounded-full border ${
+                                                                        isActive 
+                                                                        ? 'border-primary bg-primary/10' 
+                                                                        : 'border-muted-foreground/30'
+                                                                    } mt-1`}></div>
+                                                                )}
+                                                                <div>
+                                                                    <span className={`font-medium ${
+                                                                        isActive 
+                                                                        ? 'text-primary' 
+                                                                        : 'text-foreground'
+                                                                    }`}>
+                                                                        {task.placeholder}
+                                                                    </span>
+                                                                    <p className="text-sm text-muted-foreground mt-1 leading-snug">{task.description}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    ) : (
+                                        <p className="text-muted-foreground text-center py-4">No segmentation tasks found for this job.</p>
+                                    )}
+                                </div>
+                                
+                                <div className="p-4 border-t border-border">
+                                    <div className="mb-3">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-xs font-medium text-muted-foreground">Completion</span>
+                                            <span className="text-xs font-medium text-primary">{completionPercentage}%</span>
+                                        </div>
+                                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                            <div 
+                                                className="h-full bg-primary rounded-full transition-all duration-500"
+                                                style={{ width: `${completionPercentage}%` }}
+                                            ></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <Button 
+                                        onClick={saveSegmentations} 
+                                        disabled={boundingBoxes.length === 0 || isSaving}
+                                        className="w-full button-hover-effect"
+                                    >
+                                        {isSaving ? 'Processing...' : 'Submit and Compile'}
+                                    </Button>
+                                    
+                                    <p className="text-xs text-muted-foreground mt-2 text-center">
+                                        {completedTasks.size} of {segmentationTasks.length} tasks completed
+                                    </p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Column 2: Image Viewer & Annotation Area */} 
+                    <div className="lg:col-span-3">
+                        <Card className="overflow-hidden h-full">
+                            <CardHeader className="bg-muted/50 pb-3 flex flex-row justify-between items-center space-y-0">
+                                <CardTitle className="flex items-center gap-2">
+                                    <PenToolIcon size={18} className="text-primary" />
+                                    Annotation Canvas
+                                </CardTitle>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={goToPrevPage}
+                                        disabled={currentPageIndex === 0}
+                                        className="flex items-center gap-1 button-hover-effect"
+                                    >
+                                        <ChevronLeftIcon size={16} />
+                                        <span className="sr-only md:not-sr-only">Previous</span>
+                                    </Button>
+                                    <span className="text-sm text-muted-foreground px-1">
+                                        Page {currentPageIndex + 1} of {pageImages.length}
+                                    </span>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={goToNextPage}
+                                        disabled={currentPageIndex >= pageImages.length - 1}
+                                        className="flex items-center gap-1 button-hover-effect"
+                                    >
+                                        <span className="sr-only md:not-sr-only">Next</span>
+                                        <ChevronRightIcon size={16} />
+                                    </Button>
+                                </div>
+                            </CardHeader>
+                            
+                            <CardContent className="p-0">
+                                <div className="bg-muted/50 flex-grow relative h-[60vh]" ref={containerRef}>
+                                    {pageImages.length > 0 && imageObj ? (
+                                        <div className="h-full w-full flex justify-center items-center overflow-hidden">
+                                            <Stage
+                                                ref={stageRef}
+                                                width={stageSize.width}
+                                                height={stageSize.height}
+                                                onMouseDown={handleMouseDown}
+                                                onMouseMove={handleMouseMove}
+                                                onMouseUp={handleMouseUp}
+                                                onTouchStart={handleTouchStart}
+                                                onTouchMove={handleTouchMove}
+                                                onTouchEnd={handleTouchEnd}
+                                            >
+                                                <Layer>
+                                                    <KonvaImage
+                                                        image={imageObj}
+                                                        width={stageSize.width}
+                                                        height={stageSize.height}
+                                                        perfectDrawEnabled={false}
+                                                    />
+                                                    {renderBoxes()}
+                                                    {renderNewBox()}
+                                                </Layer>
+                                            </Stage>
+                                        </div>
+                                    ) : (
+                                        <div className="h-full flex flex-col justify-center items-center text-muted-foreground">
+                                            <div className="bg-muted p-3 rounded-full mb-3">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-muted-foreground/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 13h5a2 2 0 012 2v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
+                                                </svg>
+                                            </div>
+                                            <p className="font-medium">No page images found</p>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                <div className="p-4 border-t border-border">
+                                    <div className="bg-primary/5 border border-primary/10 rounded-lg p-4">
+                                        <div className="flex items-start gap-3">
+                                            <div className="bg-primary/10 p-2 rounded-md">
+                                                <PenToolIcon size={20} className="text-primary" />
+                                            </div>
+                                            <div>
+                                                <h3 className="font-medium text-foreground">
+                                                    {segmentationTasks[currentTaskIndex]?.placeholder || 'No task selected'}
+                                                </h3>
+                                                <p className="text-sm text-primary/90 mt-1">
+                                                    {segmentationTasks[currentTaskIndex]?.description || ''}
+                                                </p>
+                                                <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                                                    <span className="bg-card px-2 py-1 rounded border border-border inline-flex items-center gap-1">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m-8 6h12" />
+                                                        </svg>
+                                                        Draw
+                                                    </span>
+                                                    <span className="bg-card px-2 py-1 rounded border border-border inline-flex items-center gap-1">
+                                                        <TrashIcon size={12} />
+                                                        Click to delete
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 } 
