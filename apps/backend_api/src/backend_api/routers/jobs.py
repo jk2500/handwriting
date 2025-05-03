@@ -1,11 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi.responses import StreamingResponse, Response
 import io
 from sqlalchemy.orm import Session
 import uuid
 from typing import List
 from fastapi import status
 from celery import Celery
+import tempfile
+import subprocess
+import os
 
 # Change to absolute imports
 from backend_api import models, schemas
@@ -219,4 +222,112 @@ async def trigger_final_compilation(
     except Exception as e:
         db.rollback()
         # Optionally log the exception e
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to trigger final compilation.") 
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to trigger final compilation.")
+
+# New endpoint for LaTeX Preview
+@router.post("/{job_id}/preview", tags=["Jobs", "Preview"], 
+             responses={
+                 200: {"content": {"application/pdf": {}}},
+                 400: {"description": "LaTeX Compilation Error"},
+                 404: {"description": "Job not found"},
+                 500: {"description": "Internal server error or LaTeX compiler not found"}
+             })
+async def generate_latex_preview(
+    job_id: uuid.UUID,
+    tex_content: str = Body(..., media_type="text/plain"), 
+    db: Session = Depends(get_db)
+):
+    """Compiles provided TeX content and returns a PDF preview."""
+    # Check if job exists (optional, but good practice)
+    db_job = db.query(models.Job).filter(models.Job.id == job_id).first()
+    if db_job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found")
+
+    # Basic security check: Ensure latexmk exists
+    if not shutil.which("latexmk"):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="LaTeX compiler (latexmk) not found on the server."
+        )
+
+    # Create a temporary directory for compilation
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_file_path = os.path.join(temp_dir, "preview.tex")
+        pdf_file_path = os.path.join(temp_dir, "preview.pdf")
+        log_file_path = os.path.join(temp_dir, "preview.log")
+
+        # Write the TeX content to the temporary file
+        with open(temp_file_path, "w", encoding="utf-8") as f:
+            f.write(tex_content)
+
+        # Compile using latexmk (safer than pdflatex directly)
+        # -pdf: Generate PDF
+        # -interaction=nonstopmode: Don't stop for errors, continue as much as possible
+        # -halt-on-error: Stop processing at the first error (alternative to nonstopmode sometimes)
+        # -file-line-error: Produce errors in file:line:error format
+        # -output-directory: Keep aux files, etc. in the temp dir
+        # Consider adding -shell-escape=false or restricted shell escape if needed, but adds complexity
+        compile_command = [
+            "latexmk",
+            "-pdf",
+            "-interaction=nonstopmode",
+            "-file-line-error",
+            "-output-directory=" + temp_dir,
+            temp_file_path
+        ]
+
+        try:
+            print(f"Running LaTeX compilation in {temp_dir}...")
+            process = subprocess.run(
+                compile_command, 
+                capture_output=True, 
+                text=True, 
+                check=False, # Don't throw error on non-zero exit code, check status below
+                timeout=30 # Add a timeout (e.g., 30 seconds)
+            )
+
+            if process.returncode != 0 or not os.path.exists(pdf_file_path):
+                # Compilation failed or PDF not generated
+                print(f"LaTeX compilation failed (return code: {process.returncode})")
+                log_content = ""
+                if os.path.exists(log_file_path):
+                    with open(log_file_path, "r", encoding="utf-8", errors="ignore") as log_f:
+                        log_content = log_f.read()[-2000:] # Get last 2000 chars of log
+                else:
+                     log_content = process.stderr or process.stdout or "No log file generated."
+                
+                # Clean up command output if needed
+                log_content = log_content.replace(temp_dir, "[TEMP_DIR]") # Basic sanitization
+                
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"LaTeX compilation failed.\n--- Log Tail ---\n{log_content}"
+                )
+
+            # Read the generated PDF content
+            with open(pdf_file_path, "rb") as f:
+                pdf_content = f.read()
+            
+            print("LaTeX compilation successful.")
+            return Response(content=pdf_content, media_type="application/pdf")
+
+        except subprocess.TimeoutExpired:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="LaTeX compilation timed out."
+            )
+        except Exception as e:
+            # Catch other potential errors during subprocess run
+             raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"An unexpected error occurred during compilation: {str(e)}"
+            )
+
+# Make sure necessary imports are at the top
+# import os 
+# import tempfile
+# import subprocess
+# import shutil
+# from fastapi import Body, Response
+
+# ... existing code ... 

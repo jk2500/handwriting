@@ -110,7 +110,7 @@ export function TaskList({
                         disabled={isSaving} 
                         className="w-full button-hover-effect"
                     >
-                        {isSaving ? 'Processing...' : 'Submit and Compile'}
+                        {isSaving ? 'Processing...' : 'Submit'}
                     </Button>
                     
                     <p className="text-xs text-muted-foreground mt-2 text-center">

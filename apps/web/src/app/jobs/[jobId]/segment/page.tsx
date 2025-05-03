@@ -147,8 +147,8 @@ export default function SegmentationPage() {
         }
     };
     
-    // Save segmentations to API and trigger compilation
-    const saveSegmentationsAndCompile = async () => {
+    // Save segmentations to API only
+    const saveSegmentations = async () => {
         setIsSaving(true);
         try {
             if (boundingBoxes.length > 0) {
@@ -182,22 +182,26 @@ export default function SegmentationPage() {
                     throw new Error(`Failed to save segmentations: ${response.status} ${response.statusText}`);
                 }
                 toast.success("Segmentations saved successfully.");
+            } else {
+                // If no boxes, still show a success message or just do nothing?
+                toast.info("No segmentations to save.");
             }
             
-            // Trigger Compilation 
-            const compileResponse = await fetch(`${API_BASE_URL}/jobs/${jobId}/compile`, {
-                method: 'POST'
-            });
-            if (!compileResponse.ok) {
-                 const errorText = await compileResponse.text().catch(() => 'Failed to read error response');
-                throw new Error(`Failed to trigger compilation: ${compileResponse.status} ${errorText}`);
-            }
-            toast.success("Compilation process started. Redirecting to jobs list...");
-            router.push(`/jobs`); 
+            // --- Removed Compilation Trigger --- 
+            // const compileResponse = await fetch(`${API_BASE_URL}/jobs/${jobId}/compile`, {
+            //     method: 'POST'
+            // });
+            // if (!compileResponse.ok) {
+            //      const errorText = await compileResponse.text().catch(() => 'Failed to read error response');
+            //     throw new Error(`Failed to trigger compilation: ${compileResponse.status} ${errorText}`);
+            // }
+            // toast.success("Compilation process started. Redirecting to jobs list...");
+            // router.push(`/jobs`); 
+
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            toast.error(`Error during save/compile: ${errorMessage}`);
-            console.error("Save/compile error details:", error);
+            toast.error(`Error saving segmentations: ${errorMessage}`);
+            console.error("Save segmentations error details:", error);
         } finally {
             setIsSaving(false);
         }
@@ -258,7 +262,7 @@ export default function SegmentationPage() {
                         completedTasks={completedTasks}
                         onSelectTask={selectTask}
                         completionPercentage={completionPercentage}
-                        onSave={saveSegmentationsAndCompile}
+                        onSave={saveSegmentations}
                         isSaving={isSaving}
                     />
                 </div>

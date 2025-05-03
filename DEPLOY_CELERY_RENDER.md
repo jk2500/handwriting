@@ -61,6 +61,7 @@ After deployment:
 - Ensure environment variables are correctly set
 - Verify that Redis and PostgreSQL are accessible from Render
 - Check if the Celery worker can import all required modules
+- **Note**: Including TeX Live increases the Docker image size significantly and may lead to longer build times.
 
 ## Maintenance
 

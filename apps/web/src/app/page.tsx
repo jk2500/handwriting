@@ -183,18 +183,22 @@ export default function Home() {
                       <TableCell>{formatDate(job.created_at)}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{job.model_used || 'N/A'}</TableCell>
                       <TableCell className="text-right space-x-2">
-                        {/* Initial TeX Button - only show after initial processing */}
+                        {/* Initial TeX Button - NAVIGATES TO EDITOR */}
                         {canDownloadInitialTex && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open(`${API_BASE_URL}/jobs/${job.id}/tex`, '_blank')}
-                            title="Download initial TeX file"
-                            className="gap-1 button-hover-effect"
-                          >
-                            <FileText className="h-3.5 w-3.5" />
-                            <span>TeX</span>
-                          </Button>
+                          <Link href={`/jobs/${job.id}/edit`} passHref legacyBehavior>
+                            <Button
+                              asChild // Important for Link + Button
+                              variant="outline"
+                              size="sm"
+                              title="Edit initial TeX file"
+                              className="gap-1 button-hover-effect"
+                            >
+                              <a> {/* Anchor tag needed for legacyBehavior */} 
+                                <FileText className="h-3.5 w-3.5" />
+                                <span>TeX</span>
+                              </a>
+                            </Button>
+                          </Link>
                         )}
                         
                         {/* Segmentation Button - only show when awaiting segmentation */}
@@ -229,18 +233,22 @@ export default function Home() {
                           </Button>
                         )}
                         
-                        {/* Final TeX Button - only show after compilation */}
+                        {/* Final TeX Button - NAVIGATES TO EDITOR */}
                         {canDownloadFinalTex && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open(`${API_BASE_URL}/jobs/${job.id}/final-tex`, '_blank')}
-                            title="Download final TeX file"
-                            className="gap-1 button-hover-effect"
-                          >
-                            <FileText className="h-3.5 w-3.5" />
-                            <span>Final TeX</span>
-                          </Button>
+                           <Link href={`/jobs/${job.id}/edit`} passHref legacyBehavior>
+                            <Button
+                              asChild // Important for Link + Button
+                              variant="outline"
+                              size="sm"
+                              title="Edit final TeX file"
+                              className="gap-1 button-hover-effect"
+                            >
+                              <a> {/* Anchor tag needed for legacyBehavior */} 
+                                <FileText className="h-3.5 w-3.5" />
+                                <span>Final TeX</span>
+                              </a>
+                            </Button>
+                          </Link>
                         )}
                         
                         {/* PDF Button - only show after compilation */}

@@ -6,7 +6,7 @@
       "use": "@vercel/next"
     },
     {
-      "src": "apps/backend_api/requirements.txt",
+      "src": "apps/backend_api/",
       "use": "@vercel/python",
       "config": { "maxLambdaSize": "15mb" }
     }
@@ -14,7 +14,7 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "apps/backend_api/main.py" 
+      "dest": "apps/backend_api/main.py"
     },
     {
       "handle": "filesystem"
