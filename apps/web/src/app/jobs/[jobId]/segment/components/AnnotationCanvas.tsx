@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useMemo, CSSProperties } from 'react';
+import React, { useMemo, CSSProperties, useEffect } from 'react';
 import { BoundingBox } from '../hooks/useSegmentationData';
+import Image from 'next/image';
 
 // Type for the temporary box being drawn
 interface DrawingBoxStyle extends CSSProperties {
@@ -10,7 +11,7 @@ interface DrawingBoxStyle extends CSSProperties {
 
 // Props for the component
 interface AnnotationCanvasProps {
-    containerRef: React.RefObject<HTMLDivElement | null>;
+    containerRef: React.RefObject<HTMLDivElement>;
     containerSize: { width: number; height: number };
     renderedImageSize: { width: number; height: number };
     imageOffset: { x: number; y: number };
@@ -40,6 +41,8 @@ export function AnnotationCanvas({
     drawingEventHandlers,
     onRemoveBox
 }: AnnotationCanvasProps) {
+    // const [imageElement, setImageElement] = useState<HTMLImageElement | null>(null);
+    // const [canvasSize, setCanvasSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
 
     // Render existing boxes as absolutely positioned divs
     const renderedBoxDivs = useMemo(() => {
@@ -98,6 +101,24 @@ export function AnnotationCanvas({
         });
     }, [boxesToRender, renderedImageSize, imageOffset, onRemoveBox]);
 
+    useEffect(() => {
+        if (containerRef.current) {
+            // const container = containerRef.current;
+            const img = new window.Image();
+            img.src = imageObj?.src || '';
+            img.onload = () => {
+                // setImageElement(img);
+            };
+        }
+    }, [imageObj, containerRef]);
+
+    useEffect(() => {
+        if (containerRef.current) {
+            // const container = containerRef.current;
+            // setCanvasSize({ width: container.clientWidth, height: container.clientHeight });
+        }
+    }, [containerRef]);
+
     return (
         <div 
             ref={containerRef}
@@ -107,26 +128,27 @@ export function AnnotationCanvas({
         >
             {imageObj ? (
                 <React.Fragment>
-                    <img 
+                    <Image 
                         src={imageObj.src}
                         alt="Document page" 
+                        width={renderedImageSize.width}
+                        height={renderedImageSize.height}
                         style={{
                             display: 'block',
-                            width: `${renderedImageSize.width}px`,
-                            height: `${renderedImageSize.height}px`,
                             objectFit: 'contain', 
                             pointerEvents: 'none'
                         }}
                         draggable="false"
                         onDragStart={(e) => e.preventDefault()}
+                        priority
                     />
                     {renderedBoxDivs}
                     <div style={newBoxStyle} /> 
                 </React.Fragment>
             ) : (
-                <div className="h-full flex flex-col justify-center items-center text-muted-foreground">
-                   <p className="font-medium">Loading page image...</p>
-                </div>
+                 <div className="h-full flex flex-col justify-center items-center text-muted-foreground">
+                    <p className="font-medium">Loading page image...</p>
+                 </div>
             )}
         </div>
     );

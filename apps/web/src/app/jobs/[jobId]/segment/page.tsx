@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '@/lib/utils';
@@ -26,7 +26,6 @@ import { TaskInstructions } from './components/TaskInstructions';
 
 export default function SegmentationPage() {
     const params = useParams();
-    const router = useRouter();
     const jobId = params.jobId as string;
 
     // --- State --- 

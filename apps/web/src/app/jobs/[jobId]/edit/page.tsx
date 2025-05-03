@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import CodeMirror from '@uiw/react-codemirror';
 import { latex } from 'codemirror-lang-latex'; 
@@ -11,18 +11,15 @@ import 'katex/dist/katex.min.css'; // Import KaTeX CSS
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '@/lib/utils';
-import { ArrowLeftIcon, Loader2, SaveIcon, DownloadIcon } from 'lucide-react';
+import { ArrowLeftIcon, Loader2, DownloadIcon } from 'lucide-react';
 
 export default function EditJobPage() {
   const params = useParams();
-  const router = useRouter();
   const jobId = params.jobId as string;
 
   const [texContent, setTexContent] = useState<string>('');
-  const [initialContent, setInitialContent] = useState<string>(''); // To check for changes
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState<boolean>(false);
 
   // Fetch initial TeX content
   useEffect(() => {
@@ -39,7 +36,6 @@ export default function EditJobPage() {
       })
       .then((data) => {
         setTexContent(data);
-        setInitialContent(data); // Store initial state
       })
       .catch((e: unknown) => {
         const errorMessage = e instanceof Error ? e.message : String(e);
@@ -55,25 +51,6 @@ export default function EditJobPage() {
   const onEditorChange = useCallback((value: string) => {
     setTexContent(value);
   }, []);
-
-  // TODO: Implement Save functionality (requires backend endpoint)
-  const handleSaveChanges = async () => {
-    if (texContent === initialContent) {
-      toast.info("No changes to save.");
-      return;
-    }
-    setIsSaving(true);
-    toast.info("Save functionality not yet implemented.");
-    console.log("Saving changes for job:", jobId);
-    console.log("New content:", texContent);
-    // Placeholder: In a real implementation, you would make a PUT/POST request
-    // to a new backend endpoint (e.g., /jobs/{jobId}/tex) to save the content.
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
-    setIsSaving(false);
-    // On success, update initialContent to prevent repeated save prompts
-    // setInitialContent(texContent);
-    // toast.success("Changes saved successfully!");
-  };
 
   // Handle download
   const handleDownload = () => {
@@ -120,15 +97,6 @@ export default function EditJobPage() {
         </Link>
         <h1 className="text-2xl font-semibold">Edit TeX (Job: {jobId.substring(0, 8)}...)</h1>
         <div className="flex gap-2">
-          {/* <Button 
-            onClick={handleSaveChanges}
-            disabled={isSaving || texContent === initialContent}
-            size="sm"
-            className="gap-1"
-          >
-            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <SaveIcon className="h-4 w-4" />}
-            <span>Save Changes</span>
-          </Button> */}
           <Button 
             onClick={handleDownload}
             size="sm"
