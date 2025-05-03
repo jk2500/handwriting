@@ -7,7 +7,7 @@ from sqlalchemy.schema import Index
 import uuid
 
 # Change to absolute import
-from backend_api.database import Base
+from api.database import Base
 
 class JobStatus(enum.Enum):
     PENDING = "pending"

@@ -10,10 +10,10 @@ from dotenv import load_dotenv
 from PIL import Image
 import shutil
 
-# Change to absolute imports
-from backend_api.celery_app import celery_app
-from backend_api.database import SessionLocal, get_db
-from backend_api import models
+# Use relative imports for local modules
+from .celery_app import celery_app
+from .database import SessionLocal, get_db
+from . import models
 
 # Imports from external package - Assuming 'core_converter' is installed or in PYTHONPATH
 # If core_converter is also part of this monorepo, adjust path as needed
@@ -21,8 +21,8 @@ from core_converter.pdf_processing.processor import render_pdf_pages_to_images
 from core_converter.vlm_interaction.api_client import get_latex_from_image
 from core_converter.latex_generation.generator import save_latex_to_file, wrap_latex_fragment
 
-# Change to absolute imports
-from backend_api.s3_utils import download_from_s3, upload_local_file_to_s3, S3_BUCKET_NAME, s3_client
+# Use relative import for s3_utils
+from .s3_utils import download_from_s3, upload_local_file_to_s3, S3_BUCKET_NAME, s3_client
 
 # Helper function to parse descriptions
 def parse_descriptions(text):
@@ -43,10 +43,10 @@ def parse_descriptions(text):
 def process_handwriting_conversion(self, job_id_str: str):
     """Celery task to process PDF -> Render -> VLM -> Initial TeX."""
     
-    # Load .env - Path adjusted for new location
+    # Load .env - Path adjusted for api/tasks.py
     try:
-        # apps/backend_api/src/backend_api/tasks.py -> up 4 levels
-        PROJECT_ROOT_FROM_TASK = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..'))
+        # Go up one level from api/tasks.py to project root
+        PROJECT_ROOT_FROM_TASK = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
         DOTENV_PATH_FROM_TASK = os.path.join(PROJECT_ROOT_FROM_TASK, '.env')
         if os.path.exists(DOTENV_PATH_FROM_TASK):
             load_dotenv(dotenv_path=DOTENV_PATH_FROM_TASK, override=True)

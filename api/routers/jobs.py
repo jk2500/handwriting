@@ -10,13 +10,13 @@ import tempfile
 import subprocess
 import os
 
-# Change to absolute imports
-from backend_api import models, schemas
-from backend_api.database import get_db
-from backend_api.s3_utils import download_from_s3, get_s3_presigned_url
-from backend_api.celery_utils import get_celery # Assuming this exists
-# Import the task (we will create this later)
-from backend_api.tasks import compile_final_document
+# Use relative imports
+from .. import models, schemas
+from ..database import get_db
+from ..s3_utils import download_from_s3, get_s3_presigned_url
+from ..celery_utils import get_celery # Assuming this exists
+# Import the task
+from ..tasks import compile_final_document
 
 router = APIRouter(
     prefix="/jobs",

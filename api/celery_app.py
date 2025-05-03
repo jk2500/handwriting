@@ -2,9 +2,8 @@ import os
 from celery import Celery
 from dotenv import load_dotenv
 
-# Ensure .env is loaded - path adjusted for new location
-# apps/backend_api/src/backend_api/celery_app.py -> up 4 levels
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
+# Ensure .env is loaded - path adjusted for api/ directory
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..")) # Go up one level from api/
 DOTENV_PATH = os.path.join(PROJECT_ROOT, ".env")
 if os.path.exists(DOTENV_PATH):
     load_dotenv(dotenv_path=DOTENV_PATH)
@@ -19,8 +18,8 @@ celery_app = Celery(
     "tasks",
     broker=CELERY_BROKER_URL,
     backend=CELERY_RESULT_BACKEND_URL,
-    # Point to the tasks module within the new package
-    include=['backend_api.tasks'] 
+    # Point to the tasks module within the api package
+    include=['api.tasks'] 
 )
 
 celery_app.conf.update(

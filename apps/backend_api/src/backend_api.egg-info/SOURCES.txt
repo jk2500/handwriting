@@ -1,17 +1,6 @@
 pyproject.toml
-src/backend_api/__init__.py
-src/backend_api/celery_app.py
-src/backend_api/database.py
-src/backend_api/main.py
-src/backend_api/models.py
-src/backend_api/s3_utils.py
-src/backend_api/schemas.py
-src/backend_api/tasks.py
 src/backend_api.egg-info/PKG-INFO
 src/backend_api.egg-info/SOURCES.txt
 src/backend_api.egg-info/dependency_links.txt
 src/backend_api.egg-info/requires.txt
 src/backend_api.egg-info/top_level.txt
-src/backend_api/routers/__init__.py
-src/backend_api/routers/jobs.py
-src/backend_api/routers/upload.py

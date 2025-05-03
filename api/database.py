@@ -5,9 +5,8 @@ from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 
 # Load environment variables from .env located at the project root
-# Path adjusted for new location: apps/backend_api/src/backend_api/database.py
-# Go up 4 levels now
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
+# Path adjusted for api/ directory
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..")) # Go up one level
 DOTENV_PATH = os.path.join(PROJECT_ROOT, ".env")
 
 if os.path.exists(DOTENV_PATH):

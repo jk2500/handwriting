@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # Import routers
-from apps.backend_api.src.backend_api.routers import upload, jobs
+from api.routers import upload, jobs
 
 app = FastAPI(title="Handwritten LaTeX Converter API")
 

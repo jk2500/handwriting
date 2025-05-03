@@ -3,11 +3,11 @@ from sqlalchemy.orm import Session
 from typing import Optional
 import uuid
 
-# Change to absolute imports
-from backend_api import models, schemas
-from backend_api.database import get_db
-from backend_api.s3_utils import upload_to_s3
-from backend_api import tasks
+# Use relative imports (up one level)
+from .. import models, schemas
+from ..database import get_db
+from ..s3_utils import upload_to_s3
+from .. import tasks
 
 DEFAULT_CONVERSION_MODEL = "o4-mini"
 

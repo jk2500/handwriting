@@ -13,3 +13,4 @@ Requires-Dist: celery[redis]
 Requires-Dist: python-dotenv
 Requires-Dist: boto3
 Requires-Dist: openai
+Requires-Dist: Pillow

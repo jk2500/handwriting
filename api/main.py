@@ -2,10 +2,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
 
-# Change to absolute imports
-from backend_api.routers import upload, jobs
-from backend_api import models
-from backend_api.database import engine
+# Use relative imports now that files are within the api/ directory
+from .routers import upload, jobs
+from . import models
+from .database import engine
 
 # Create database tables (consider using Alembic for production)
 # models.Base.metadata.create_all(bind=engine) # Commented out - handled by Alembic build step

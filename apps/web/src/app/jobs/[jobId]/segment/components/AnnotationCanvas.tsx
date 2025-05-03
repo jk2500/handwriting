@@ -2,7 +2,6 @@
 
 import React, { useMemo, CSSProperties, useEffect } from 'react';
 import { BoundingBox } from '../hooks/useSegmentationData';
-import Image from 'next/image';
 
 // Type for the temporary box being drawn
 interface DrawingBoxStyle extends CSSProperties {
@@ -128,7 +127,7 @@ export function AnnotationCanvas({
         >
             {imageObj ? (
                 <React.Fragment>
-                    <Image 
+                    <img 
                         src={imageObj.src}
                         alt="Document page" 
                         width={renderedImageSize.width}
@@ -136,11 +135,13 @@ export function AnnotationCanvas({
                         style={{
                             display: 'block',
                             objectFit: 'contain', 
+                            position: 'absolute',
+                            left: `${imageOffset.x}px`,
+                            top: `${imageOffset.y}px`,
                             pointerEvents: 'none'
                         }}
                         draggable="false"
                         onDragStart={(e) => e.preventDefault()}
-                        priority
                     />
                     {renderedBoxDivs}
                     <div style={newBoxStyle} /> 
