@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import CodeMirror from '@uiw/react-codemirror';
 import { latex } from 'codemirror-lang-latex';
@@ -38,7 +38,6 @@ import {
 } from "@/components/ui/select";
 
 export default function EditJobPage() {
-  const router = useRouter();
   const params = useParams();
   const jobId = params.jobId as string;
 
@@ -117,7 +116,7 @@ export default function EditJobPage() {
       setIsPreviewLoading(false);
       console.log("Preview fetch finished.");
     }
-  }, [jobId]);
+  }, [jobId, lastPreviewContent]);
 
   // Save the current TeX content
   const saveTexContent = async () => {

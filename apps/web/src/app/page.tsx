@@ -160,8 +160,8 @@ export default function Home() {
               ) : (
                 recentJobs.map((job) => {
                   const { 
-                    canDownloadInitialTex,
-                    canDownloadFinalTex,
+                    // canDownloadInitialTex, // Commented out unused variable
+                    // canDownloadFinalTex, // Commented out unused variable
                     canDownloadPdf,
                     canSegment,
                     canCompile,

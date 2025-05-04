@@ -150,6 +150,14 @@ export default function JobsPage() {
   // Use the status icon from utility
   const StatusIcon = ({ status }: { status: string }) => getStatusIcon(status);
 
+  // Derived states for button disabling based on job status
+  // const canDownloadInitialTex = job.status !== JobStatus.Pending && job.status !== JobStatus.Processing;
+  // const canDownloadFinalTex = job.status === JobStatus.Completed || job.status === JobStatus.Failed || job.status === JobStatus.CompletedWithWarnings;
+
+  // const handleCopyJobId = () => {
+  //   navigator.clipboard.writeText(job.id)
+  // }
+
   return (
     <div className="container mx-auto px-4 py-8 page-animation">
       <div className="mb-8">
@@ -275,8 +283,8 @@ export default function JobsPage() {
               ) : (
                 filteredJobs.map((job) => {
                   const { 
-                    canDownloadInitialTex,
-                    canDownloadFinalTex,
+                    // canDownloadInitialTex, // Commented out
+                    // canDownloadFinalTex, // Commented out
                     canDownloadPdf,
                     canSegment,
                     canCompile,
@@ -373,4 +381,4 @@ export default function JobsPage() {
       )}
     </div>
   );
-} 
+}
