@@ -1,6 +1,14 @@
+import sys
+import os
+
+# Add project root to sys.path to allow absolute imports from 'packages' etc.
+# __file__ is api/main.py, parent is api/, parent.parent is project root
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT) # Insert at beginning for precedence
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import os
 
 # Use relative imports now that files are within the api/ directory
 from .routers import upload, jobs
