@@ -9,17 +9,29 @@ from typing import List
 from dotenv import load_dotenv
 from PIL import Image
 import shutil
+import redis
+from celery.result import AsyncResult
 
 # Use relative imports for local modules
 from .celery_app import celery_app
 from .database import SessionLocal, get_db
 from . import models
 
+# Use relative import to access modules outside the 'api' directory
+# from ..packages.core_converter.pdf_processing.processor import render_pdf_pages_to_images # Old way
+# Assuming 'packages' is in the parent directory of 'api'
+from .. import packages # Import the parent package directory
+
 # Imports from external package - Assuming 'core_converter' is installed or in PYTHONPATH
 # If core_converter is also part of this monorepo, adjust path as needed
-from core_converter.pdf_processing.processor import render_pdf_pages_to_images
-from core_converter.vlm_interaction.api_client import get_latex_from_image
-from core_converter.latex_generation.generator import save_latex_to_file, wrap_latex_fragment
+# from core_converter.vlm_interaction.api_client import get_latex_from_image # Old way
+# from core_converter.latex_generation.generator import save_latex_to_file, wrap_latex_fragment # Old way
+
+# Assign functions/classes after importing the parent package
+render_pdf_pages_to_images = packages.core_converter.pdf_processing.processor.render_pdf_pages_to_images
+get_latex_from_image = packages.core_converter.vlm_interaction.api_client.get_latex_from_image
+save_latex_to_file = packages.core_converter.latex_generation.generator.save_latex_to_file
+wrap_latex_fragment = packages.core_converter.latex_generation.generator.wrap_latex_fragment
 
 # Use relative import for s3_utils
 from .s3_utils import download_from_s3, upload_local_file_to_s3, S3_BUCKET_NAME, s3_client
