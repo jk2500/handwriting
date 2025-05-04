@@ -7,6 +7,7 @@ fastapi
 uvicorn[standard] # Server for FastAPI
 SQLAlchemy # ORM
 psycopg2-binary # PostgreSQL driver
+Pillow # Add Pillow for image processing
 celery # Task Queue
 redis # Broker/Result Backend for Celery
 boto3 # AWS SDK for S3
