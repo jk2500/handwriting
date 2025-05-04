@@ -12,3 +12,4 @@ celery # Task Queue
 redis # Broker/Result Backend for Celery
 boto3 # AWS SDK for S3
 alembic # Database migrations
+python-multipart # For handling form data
