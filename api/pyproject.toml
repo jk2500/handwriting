@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "api"
+version = "0.1.0"
+description = "FastAPI backend for the Handwritten LaTeX Converter"
+readme = "README.md"  # Optional: Add if you have a README
+requires-python = ">=3.10"
+# Dependencies required by the api package itself.
+# Note: Dockerfile installs dependencies primarily from requirements.txt
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]", # Includes uvloop and httptools
+    "sqlalchemy",
+    "psycopg2-binary", # Or psycopg2 if you install C extensions separately
+    "alembic",
+    "celery[redis]",
+    "python-dotenv",
+    "boto3",
+    "openai",
+    "Pillow", # Added for image processing
+    # Add core_converter package if it's separate and needs to be installed
+    # "core_converter @ file:///<path_to_core_converter_package>", 
+]
+# classifiers = [ ... ] # Optional: Add classifiers
+
+[tool.setuptools.packages.find]
+where = ["."]  # Source code is directly in the 'api/' directory 
