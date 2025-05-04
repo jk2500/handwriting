@@ -18,9 +18,10 @@ from .database import SessionLocal, get_db
 from . import models
 
 # Imports from root package 'packages' now that sys.path is updated in main.py
-from packages.core_converter.pdf_processing.processor import render_pdf_pages_to_images
-from packages.core_converter.vlm_interaction.api_client import get_latex_from_image
-from packages.core_converter.latex_generation.generator import save_latex_to_file, wrap_latex_fragment
+# Include 'src' in the path according to the actual directory structure
+from packages.core_converter.src.pdf_processing.processor import render_pdf_pages_to_images
+from packages.core_converter.src.vlm_interaction.api_client import get_latex_from_image
+from packages.core_converter.src.latex_generation.generator import save_latex_to_file, wrap_latex_fragment
 
 # Use relative import for s3_utils
 from .s3_utils import download_from_s3, upload_local_file_to_s3, S3_BUCKET_NAME, s3_client
