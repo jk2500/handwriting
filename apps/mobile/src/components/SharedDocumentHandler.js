@@ -17,7 +17,8 @@ const SharedDocumentHandler = ({ onUploadSuccess }) => {
   // Handle document sharing when the app is already running
   const handleDocumentSharing = async (event) => {
     try {
-      const { url } = event;
+      // In Expo SDK 52 with expo-linking v5, the URL might be passed directly
+      const url = typeof event === 'object' ? event.url : event;
       if (!url) return;
 
       // Process the URL to get a usable file URI
@@ -51,10 +52,14 @@ const SharedDocumentHandler = ({ onUploadSuccess }) => {
     checkForSharedDocuments();
 
     // Set up event listener for when app receives a shared document while running
-    const linkingSubscription = Linking.addEventListener('url', handleDocumentSharing);
+    // With expo-linking v5, we need to use addListener instead of addEventListener
+    const subscription = Linking.addListener('url', handleDocumentSharing);
 
     return () => {
-      linkingSubscription.remove();
+      // Clean up the listener
+      if (subscription && typeof subscription.remove === 'function') {
+        subscription.remove();
+      }
     };
   }, []);
 

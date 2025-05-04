@@ -100,6 +100,7 @@ export const uploadSharedDocument = async (uri, description = '') => {
  */
 export const getInitialSharedDocument = async () => {
   try {
+    // In Expo Linking v5, getInitialURL returns the URL directly
     const url = await Linking.getInitialURL();
     if (!url) return null;
     
@@ -108,14 +109,16 @@ export const getInitialSharedDocument = async () => {
       return url;
     }
     
-    // Handle custom scheme URLs
-    const { path, queryParams } = Linking.parse(url);
+    // For Expo Linking v5, use parseURL instead of parse
+    // Note: parseURL may not exist in all versions, fallback to parse if needed
+    const parseFunction = Linking.parseURL || Linking.parse;
+    const parsed = parseFunction(url);
     
     // Handle different URL formats depending on the platform and sharing method
-    if (queryParams && queryParams.url) {
-      return queryParams.url;
-    } else if (path) {
-      return path;
+    if (parsed.queryParams && parsed.queryParams.url) {
+      return parsed.queryParams.url;
+    } else if (parsed.path) {
+      return parsed.path;
     }
     
     return null;

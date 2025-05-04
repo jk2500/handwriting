@@ -9,12 +9,12 @@
     "web": "expo start --web"
   },
   "dependencies": {
-    "@react-navigation/native": "^7.1.7",
-    "@react-navigation/native-stack": "^7.3.11",
+    "@react-navigation/native": "^6.1.9",
+    "@react-navigation/native-stack": "^6.9.17",
     "expo": "~52.0.46",
     "expo-document-picker": "^13.1.5",
     "expo-file-system": "~16.0.8",
-    "expo-linking": "~6.0.6",
+    "expo-linking": "~5.0.2",
     "expo-status-bar": "~2.0.1",
     "react": "18.3.1",
     "react-native": "0.76.9",

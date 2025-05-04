@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet } from 'react-native';
 import { PaperProvider, DefaultTheme } from 'react-native-paper';
@@ -35,12 +35,21 @@ const theme = {
 };
 
 export default function App() {
-  const [refreshJobs, setRefreshJobs] = React.useState(0);
+  const [refreshJobs, setRefreshJobs] = useState(0);
   
   const handleUploadSuccess = () => {
     // Increment to trigger a refresh of job lists in screens
     setRefreshJobs(prev => prev + 1);
   };
+
+  // Create a navigation screen params function to pass the refresh trigger
+  const getHomeScreenParams = () => ({
+    refreshTrigger: refreshJobs
+  });
+  
+  const getAllJobsScreenParams = () => ({
+    refreshTrigger: refreshJobs
+  });
 
   return (
     <PaperProvider theme={theme}>
@@ -54,13 +63,13 @@ export default function App() {
           <Stack.Screen 
             name="Home" 
             component={HomeScreen} 
-            initialParams={{ refreshTrigger: refreshJobs }}
+            initialParams={getHomeScreenParams()}
           />
           <Stack.Screen name="Segment" component={SegmentScreen} />
           <Stack.Screen 
             name="AllJobs" 
             component={AllJobsScreen}
-            initialParams={{ refreshTrigger: refreshJobs }}
+            initialParams={getAllJobsScreenParams()}
           />
         </Stack.Navigator>
         
