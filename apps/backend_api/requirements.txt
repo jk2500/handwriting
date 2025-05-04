@@ -7,4 +7,5 @@ redis
 boto3
 python-dotenv
 pydantic[email]
-alembic # For database migrations 
+alembic # For database migrations
+Pillow # For image processing (PIL) 
