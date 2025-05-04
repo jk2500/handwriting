@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '@/lib/utils';
@@ -26,6 +26,7 @@ import { TaskInstructions } from './components/TaskInstructions';
 
 export default function SegmentationPage() {
     const params = useParams();
+    const router = useRouter();
     const jobId = params.jobId as string;
 
     // --- State --- 
@@ -186,16 +187,17 @@ export default function SegmentationPage() {
                 toast.info("No segmentations to save.");
             }
             
-            // --- Removed Compilation Trigger --- 
-            // const compileResponse = await fetch(`${API_BASE_URL}/jobs/${jobId}/compile`, {
-            //     method: 'POST'
-            // });
-            // if (!compileResponse.ok) {
-            //      const errorText = await compileResponse.text().catch(() => 'Failed to read error response');
-            //     throw new Error(`Failed to trigger compilation: ${compileResponse.status} ${errorText}`);
-            // }
-            // toast.success("Compilation process started. Redirecting to jobs list...");
-            // router.push(`/jobs`); 
+            // Trigger compilation process
+            const compileResponse = await fetch(`${API_BASE_URL}/jobs/${jobId}/compile`, {
+                method: 'POST'
+            });
+            if (!compileResponse.ok) {
+                const errorText = await compileResponse.text().catch(() => 'Failed to read error response');
+                throw new Error(`Failed to trigger compilation: ${compileResponse.status} ${errorText}`);
+            }
+            toast.success("Compilation process started.");
+            // Uncomment the next line if you want to redirect after submission
+            // router.push(`/jobs`);
 
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : String(error);
