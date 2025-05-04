@@ -164,7 +164,8 @@ export default function Home() {
                     canDownloadFinalTex,
                     canDownloadPdf,
                     canSegment,
-                    canCompile
+                    canCompile,
+                    canViewTex
                   } = getButtonVisibility(job);
                   
                   return (
@@ -183,19 +184,19 @@ export default function Home() {
                       <TableCell>{formatDate(job.created_at)}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{job.model_used || 'N/A'}</TableCell>
                       <TableCell className="text-right space-x-2">
-                        {/* Initial TeX Button - NAVIGATES TO EDITOR */}
-                        {canDownloadInitialTex && (
+                        {/* View TeX Button */}
+                        {canViewTex && (
                           <Link href={`/jobs/${job.id}/edit`} passHref legacyBehavior>
                             <Button
-                              asChild // Important for Link + Button
+                              asChild
                               variant="outline"
                               size="sm"
-                              title="Edit initial TeX file"
+                              title="View and edit TeX file"
                               className="gap-1 button-hover-effect"
                             >
-                              <a> {/* Anchor tag needed for legacyBehavior */} 
+                              <a>
                                 <FileText className="h-3.5 w-3.5" />
-                                <span>TeX</span>
+                                <span>View TeX</span>
                               </a>
                             </Button>
                           </Link>
@@ -231,24 +232,6 @@ export default function Home() {
                             <PlayCircle className="h-3.5 w-3.5" />
                             <span>Compile</span>
                           </Button>
-                        )}
-                        
-                        {/* Final TeX Button - NAVIGATES TO EDITOR */}
-                        {canDownloadFinalTex && (
-                           <Link href={`/jobs/${job.id}/edit`} passHref legacyBehavior>
-                            <Button
-                              asChild // Important for Link + Button
-                              variant="outline"
-                              size="sm"
-                              title="Edit final TeX file"
-                              className="gap-1 button-hover-effect"
-                            >
-                              <a> {/* Anchor tag needed for legacyBehavior */} 
-                                <FileText className="h-3.5 w-3.5" />
-                                <span>Final TeX</span>
-                              </a>
-                            </Button>
-                          </Link>
                         )}
                         
                         {/* PDF Button - only show after compilation */}

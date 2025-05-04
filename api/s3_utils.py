@@ -3,6 +3,7 @@ Utilities for interacting with AWS S3.
 """
 
 import uuid
+import io
 import os
 from fastapi import UploadFile
 import boto3
@@ -122,4 +123,41 @@ def get_s3_presigned_url(s3_key: str, expiration_seconds: int = 3600) -> str | N
         return None
     except Exception as e:
         print(f"An unexpected error occurred during presigned URL generation: {e}")
+        return None 
+
+def upload_content_to_s3(content: bytes, s3_key: str, content_type: str | None = None) -> str | None:
+    """
+    Uploads bytes content directly to the configured S3 bucket.
+    
+    Args:
+        content (bytes): The content to upload
+        s3_key (str): The S3 key where the file will be saved
+        content_type (str, optional): The content-type of the file
+        
+    Returns:
+        str | None: The S3 key if successful, None if there was an error
+    """
+    if not S3_BUCKET_NAME or "placeholder" in S3_BUCKET_NAME:
+         print("Error: S3_BUCKET_NAME not configured correctly for actual upload.")
+         return None
+    
+    extra_args = {}
+    if content_type:
+        extra_args['ContentType'] = content_type
+        
+    print(f"Attempting to upload content to bucket '{S3_BUCKET_NAME}' with key '{s3_key}'")
+    try:
+        s3_client.upload_fileobj(
+            io.BytesIO(content),
+            S3_BUCKET_NAME, 
+            s3_key,
+            ExtraArgs=extra_args
+        )
+        print(f"Successfully uploaded content to {s3_key}")
+        return s3_key
+    except ClientError as e:
+        print(f"S3 ClientError uploading to {s3_key}: {e}")
+        return None
+    except Exception as e:
+        print(f"An unexpected error occurred during S3 upload to {s3_key}: {e}")
         return None 

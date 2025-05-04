@@ -9,11 +9,14 @@ from celery import Celery
 import tempfile
 import subprocess
 import os
+import shutil
+from PIL import Image
+import re
 
 # Use relative imports
 from .. import models, schemas
 from ..database import get_db
-from ..s3_utils import download_from_s3, get_s3_presigned_url
+from ..s3_utils import download_from_s3, get_s3_presigned_url, upload_content_to_s3
 from ..celery_utils import get_celery # Assuming this exists
 # Import the task
 from ..tasks import compile_final_document
@@ -322,6 +325,233 @@ async def generate_latex_preview(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"An unexpected error occurred during compilation: {str(e)}"
             )
+
+# New endpoint for LaTeX Preview with Images
+@router.post("/{job_id}/preview-with-images", tags=["Jobs", "Preview"], 
+             responses={
+                 200: {"content": {"application/pdf": {}}},
+                 400: {"description": "LaTeX Compilation Error"},
+                 404: {"description": "Job not found"},
+                 500: {"description": "Internal server error or LaTeX compiler not found"}
+             })
+async def generate_latex_preview_with_images(
+    job_id: uuid.UUID,
+    tex_content: str = Body(..., media_type="text/plain"), 
+    db: Session = Depends(get_db)
+):
+    """Compiles provided TeX content with diagram images and returns a PDF preview."""
+    # Check if job exists
+    db_job = db.query(models.Job).filter(models.Job.id == job_id).first()
+    if db_job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found")
+
+    # Basic security check: Ensure latexmk exists
+    if not shutil.which("latexmk"):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="LaTeX compiler (latexmk) not found on the server"
+        )
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Set up directories
+        figures_dir = os.path.join(temp_dir, "figures")
+        os.makedirs(figures_dir, exist_ok=True)
+        
+        # Get segmentations for this job
+        segmentations = db.query(models.Segmentation).filter(
+            models.Segmentation.job_id == job_id
+        ).all()
+        
+        # Get page images
+        page_images = db.query(models.JobPageImage).filter(
+            models.JobPageImage.job_id == job_id
+        ).all()
+        
+        # Map for easier lookup by page number
+        page_images_map = {p.page_number: p for p in page_images}
+        
+        # Process segmentations (similar to compile_final_document in tasks.py)
+        for seg in segmentations:
+            page_image_record = page_images_map.get(seg.page_number)
+            if not page_image_record:
+                continue  # Skip if page image not found
+
+            page_image_s3_path = page_image_record.s3_path
+            page_image_filename = os.path.basename(page_image_s3_path)
+            temp_page_image_path = os.path.join(temp_dir, page_image_filename)
+
+            # Download page image
+            page_image_bytes = download_from_s3(page_image_s3_path)
+            if not page_image_bytes:
+                continue  # Skip if image download fails
+                
+            with open(temp_page_image_path, 'wb') as f:
+                f.write(page_image_bytes)
+
+            # Crop segmentation from page image
+            try:
+                with Image.open(temp_page_image_path) as img:
+                    img_width, img_height = img.size
+                    x1 = seg.x * img_width
+                    y1 = seg.y * img_height
+                    x2 = (seg.x + seg.width) * img_width
+                    y2 = (seg.y + seg.height) * img_height
+                    # Clamp coordinates
+                    x1, y1 = max(0, x1), max(0, y1)
+                    x2, y2 = min(img_width, x2), min(img_height, y2)
+                    if x1 >= x2 or y1 >= y2:
+                        continue  # Skip invalid crop
+                    crop_box = (int(x1), int(y1), int(x2), int(y2))
+                    cropped_img = img.crop(crop_box)
+                    # Sanitize label for filename
+                    safe_label = re.sub(r'[^a-zA-Z0-9_\-]', '_', seg.label)
+                    cropped_filename = f"{safe_label}.png"
+                    cropped_image_output_path = os.path.join(figures_dir, cropped_filename)
+                    cropped_img.save(cropped_image_output_path, "PNG")
+            except Exception as crop_err:
+                print(f"Error cropping segmentation {seg.label}: {crop_err}")
+                # Continue to next segmentation rather than failing completely
+
+        # Save the TeX content to a file
+        tex_path = os.path.join(temp_dir, "preview.tex")
+        with open(tex_path, 'w', encoding='utf-8') as f:
+            f.write(tex_content)
+
+        # Compile TeX to PDF
+        compile_cmd = [
+            "latexmk", 
+            "-pdf",
+            "-interaction=nonstopmode",
+            "-halt-on-error",
+            "preview.tex"
+        ]
+        
+        try:
+            result = subprocess.run(
+                compile_cmd,
+                cwd=temp_dir,
+                capture_output=True,
+                timeout=30  # Shorter timeout for preview
+            )
+            
+            pdf_path = os.path.join(temp_dir, "preview.pdf")
+            
+            if not os.path.exists(pdf_path):
+                # Process and return compilation error
+                log_path = os.path.join(temp_dir, "preview.log")
+                error_message = "Compilation failed - no output PDF generated"
+                
+                if os.path.exists(log_path):
+                    with open(log_path, 'r', encoding='utf-8', errors='replace') as f:
+                        log_content = f.read()
+                    
+                    # Extract error lines from the log
+                    error_lines = [line for line in log_content.splitlines() 
+                                 if line.startswith('!') or "Error:" in line]
+                    if error_lines:
+                        error_message = "\n".join(error_lines[:15])  # First 15 errors
+                
+                return Response(
+                    content=error_message,
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    media_type="text/plain"
+                )
+            
+            # Return the compiled PDF
+            with open(pdf_path, 'rb') as f:
+                pdf_content = f.read()
+                
+            return Response(
+                content=pdf_content,
+                media_type="application/pdf"
+            )
+            
+        except subprocess.TimeoutExpired:
+            return Response(
+                content="Compilation timed out",
+                status_code=status.HTTP_408_REQUEST_TIMEOUT,
+                media_type="text/plain"
+            )
+            
+        except Exception as e:
+            return Response(
+                content=f"Compilation error: {str(e)}",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                media_type="text/plain"
+            )
+
+@router.put("/{job_id}/tex", status_code=status.HTTP_200_OK)
+async def update_job_tex(
+    job_id: uuid.UUID,
+    tex_content: str = Body(..., media_type="text/plain"),
+    db: Session = Depends(get_db)
+):
+    """Updates the TeX content for a job and saves it back to S3."""
+    db_job = db.query(models.Job).filter(models.Job.id == job_id).first()
+    if db_job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+    
+    # Determine which TeX file to update based on status
+    tex_s3_path: str | None = None
+    is_final_tex = False
+    
+    if db_job.status == models.JobStatus.COMPILATION_COMPLETE:
+        # For completed jobs, update final TeX
+        if db_job.final_tex_s3_path:
+            tex_s3_path = db_job.final_tex_s3_path
+            is_final_tex = True
+        else:
+            # If final doesn't exist, fall back to initial
+            if db_job.initial_tex_s3_path:
+                tex_s3_path = db_job.initial_tex_s3_path
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="No TeX paths found for this job."
+                )
+    else:
+        # For all other statuses, update initial TeX
+        if db_job.initial_tex_s3_path:
+            tex_s3_path = db_job.initial_tex_s3_path
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Initial TeX file path not found for this job."
+            )
+    
+    # Upload updated content to S3
+    try:
+        # Convert string content to bytes for S3 upload
+        tex_content_bytes = tex_content.encode('utf-8')
+        
+        # Upload to S3
+        upload_result = upload_content_to_s3(
+            content=tex_content_bytes,
+            s3_key=tex_s3_path,
+            content_type='text/plain'
+        )
+        
+        if not upload_result:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to upload updated TeX content to S3."
+            )
+        
+        # If this was a final TeX update, invalidate any existing PDF
+        if is_final_tex:
+            # Only reset compilation status if it was previously successful
+            # This allows user to edit and recompile final TeX
+            db_job.status = models.JobStatus.SEGMENTATION_COMPLETE
+            db_job.final_pdf_s3_path = None
+            db.commit()
+        
+        return {"message": "TeX file updated successfully", "tex_path": tex_s3_path}
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update TeX file: {str(e)}"
+        )
 
 # Make sure necessary imports are at the top
 # import os 

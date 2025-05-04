@@ -91,12 +91,11 @@ export const getStatusClass = (status: string): string => {
 
 // Helper to get button visibility flags based on job status
 export const getButtonVisibility = (job: Job) => {
-  // Final TeX and PDF buttons - available only when compilation_complete
-  const canDownloadFinalTex = ['compilation_complete', 'completed'].includes(job.status);
+  // PDF button - available only when compilation_complete
   const canDownloadPdf = ['compilation_complete', 'completed'].includes(job.status);
   
-  // Initial TeX button - available after processing_vlm completes BUT ONLY IF final TeX isn't available
-  const canDownloadInitialTex = !['pending', 'rendering', 'processing_vlm', 'failed'].includes(job.status) && !canDownloadFinalTex;
+  // View TeX button - available after processing_vlm completes but NOT after compilation is complete
+  const canViewTex = !['pending', 'rendering', 'processing_vlm', 'failed'].includes(job.status) && !canDownloadPdf;
   
   // Segmentation button - available only when awaiting_segmentation
   const canSegment = job.status === 'awaiting_segmentation';
@@ -104,12 +103,17 @@ export const getButtonVisibility = (job: Job) => {
   // Compile button - available only after segmentation_complete
   const canCompile = job.status === 'segmentation_complete';
 
+  // For backward compatibility
+  const canDownloadInitialTex = false;
+  const canDownloadFinalTex = false;
+
   return {
     canDownloadInitialTex,
     canDownloadFinalTex,
     canDownloadPdf,
     canSegment,
-    canCompile
+    canCompile,
+    canViewTex
   };
 };
 
