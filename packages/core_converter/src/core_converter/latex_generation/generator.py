@@ -19,7 +19,7 @@ DEFAULT_BEGIN_DOCUMENT = r"\begin{document}"
 DEFAULT_END_DOCUMENT = r"\end{document}"
 
 def wrap_latex_fragment(fragment: str, preamble: str = DEFAULT_PREAMBLE, begin_doc: str = DEFAULT_BEGIN_DOCUMENT, end_doc: str = DEFAULT_END_DOCUMENT) -> str:
-    """
+    r"""
     Wraps a LaTeX fragment with a standard preamble and document environment.
 
     Args:
