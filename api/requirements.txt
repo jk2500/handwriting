@@ -8,4 +8,6 @@ boto3
 python-dotenv
 pydantic[email]
 alembic # For database migrations
-Pillow # For image processing (PIL) 
+Pillow # For image processing (PIL)
+PyMuPDF
+python-multipart 
