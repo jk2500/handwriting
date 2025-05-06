@@ -24,8 +24,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 # Import Base from the new package structure
 # Note: The sys.path modification above is technically no longer needed
 # if backend_api is installed via pip install -e ., but doesn't hurt.
-from api.database import Base 
-from api.models import Job # Also import models absolutely
+from database import Base, SQLALCHEMY_DATABASE_URL
+from models import Job
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -80,7 +80,7 @@ def run_migrations_online() -> None:
     # Instead of engine_from_config, use the engine we already created in database.py
     # Requires importing the engine
     # Change to absolute import
-    from api.database import engine as db_engine
+    from database import engine as db_engine
     # connectable = engine_from_config(...)
     connectable = db_engine
 

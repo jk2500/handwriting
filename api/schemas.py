@@ -4,7 +4,7 @@ import uuid
 import datetime
 
 # Change to absolute import
-from api.models import JobStatus
+from .models import JobStatus
 
 # --- Job Schemas ---
 class JobBase(BaseModel):

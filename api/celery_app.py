@@ -19,7 +19,7 @@ celery_app = Celery(
     broker=CELERY_BROKER_URL,
     backend=CELERY_RESULT_BACKEND_URL,
     # Point to the tasks module within the api package
-    include=['api.tasks'] 
+    include=['.tasks'] 
 )
 
 celery_app.conf.update(
