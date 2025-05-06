@@ -38,8 +38,16 @@ async def get_job_status(job_id: uuid.UUID, db: Session = Depends(get_db)):
 
 @router.get("", response_model=List[schemas.Job])
 async def list_jobs(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    jobs = db.query(models.Job).order_by(models.Job.created_at.desc()).offset(skip).limit(limit).all()
-    return jobs
+    try:
+        print(f"Attempting to list jobs with skip={skip}, limit={limit}")
+        jobs = db.query(models.Job).order_by(models.Job.created_at.desc()).offset(skip).limit(limit).all()
+        print(f"Successfully retrieved {len(jobs)} jobs from DB.")
+        return jobs
+    except Exception as e:
+        print(f"ERROR in list_jobs: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Internal server error in list_jobs: {str(e)}")
 
 @router.get("/{job_id}/tex")
 async def get_job_tex(job_id: uuid.UUID, db: Session = Depends(get_db)):
