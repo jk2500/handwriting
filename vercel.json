@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "buildCommand": "bash build_project.sh",
   "builds": [
     {
       "src": "apps/web/package.json",

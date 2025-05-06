@@ -80,7 +80,7 @@ def run_migrations_online() -> None:
     # Instead of engine_from_config, use the engine we already created in database.py
     # Requires importing the engine
     # Change to absolute import
-    from backend_api.database import engine as db_engine
+    from api.database import engine as db_engine
     # connectable = engine_from_config(...)
     connectable = db_engine
 
