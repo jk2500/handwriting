@@ -1,5 +1,8 @@
+print("--- PYTHON SCRIPT api/main.py STARTED ---")
+print("--- ABOUT TO IMPORT SYS AND OS ---")
 import sys
 import os
+print("--- SYS AND OS IMPORTED ---")
 
 # Add project root to sys.path to allow absolute imports from 'packages' etc.
 # __file__ is api/main.py, parent is api/, parent.parent is project root
