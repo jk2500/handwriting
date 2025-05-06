@@ -4,34 +4,69 @@
 \usepackage{amssymb}
 \usepackage{mhchem}
 \usepackage{chemfig}
+\author{Ramakrishna Kompella}
 
 \begin{document}
 
-% Reaction 1: Base hydrolysis
+\section*{Sets and Relations}
+
+A set is a bunch of things. It could be people, animals, or anything.  
+You can have sets of all smartphones manufactured, set of all fictional characters, set of all books.
+
+Sets have elements or members. As we're just mentioning they could be things or even other sets.  
+A line is a set of points.  
+A plane/surface/rectangle is a set of lines.
+
+If a set $A$ contains the element $n$ then we say that $n$ belongs to $A$, or: $n \in A$.
+
+Note: lowercase letters are often used for elements and uppercase for sets.
+
+\section*{Extension}
+
+Now, take say that two sets which have the same elements are the same.  
+Although it seems trivial, that need not be so.  
+For example, the order of the elements might matter. However, for a set, they do not.
+
+Another more appropriate although less compelling example:
+
+Consider a person as a set of all his ancestors.  
+Although each person may have only one set describing them.  
+Different people may have the same ancestors i.e.\ siblings.
+
+A more general way to understand this would be to say that there is nothing else to a set than the elements belonging to it.
+
+More formally,
+
+Axiom of extension: A set is determined by its extension.
+
+\section*{Subsets and supersets}
+
+Let's take two sets: $A$ and $B$.  
+If every element in $A$ is an element of $B$ (not necessarily the other way around),  
+that is, there could be some more elements in $B$ other than the ones in $A$.
+
+We say that $A$ is a subset of $B$, or $B$ includes $A$:
+
 \[
-  \text{STRUCTURE-1} + 3\,\ce{NaOH}
-  \longrightarrow
-  \text{STRUCTURE-2} + 2\,\ce{CH3COONa} + \ce{H2O}
+A \subset B
 \]
 
-% Reaction 2: Acetylation of 4-nitrophenol
+or
+
 \[
-  \text{STRUCTURE-3} + \ce{CH3COCl}
-  \longrightarrow
-  \text{STRUCTURE-4} + \ce{HCl}
+B \supset A
 \]
 
-% Reaction 3: Nitration, reduction, and cyclization sequence
-\[
-\begin{aligned}
-  &\text{STRUCTURE-5}
-    \xrightarrow{1\,\ce{HNO3},\, -5\text{--}0\,^\circ\mathrm{C}}
-    \text{STRUCTURE-6}
-    \xrightarrow[\ce{HCl}]{\mathrm{Fe}}
-    \text{STRUCTURE-7}
-    \xrightarrow{\ce{ClCH2COCl}}
-    \text{STRUCTURE-8}
-\end{aligned}
-\]
+We see that, by definition $A \subset A$.  
+If $A \subset B$ and $A \neq B$, then $A$ is a proper subset.  
+We can also infer the following:
+
+If $A \subseteq B$ and $B \subseteq C$, then $A \subseteq C$.
+
+If $A \subseteq B$ and $B \subseteq A$, then $A = B$.
+
+Instead, the second condition is often used to prove equality.
+
+Belonging and inclusion are different things.
 
 \end{document}
