@@ -15,11 +15,11 @@ COPY api/ /app/api/
 
 # Install packages and dependencies
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install --no-cache-dir -e /app/packages/core_converter
-RUN pip install --no-cache-dir -e /app/api
+RUN pip install --no-cache-dir /app/packages/core_converter
+RUN pip install --no-cache-dir /app/api
 
 # Set environment variable
 ENV PYTHONPATH=/app
 
 # Command to run the worker
-CMD ["celery", "-A", "api.celery_app", "worker", "--loglevel=info"] 
+CMD ["celery", "-A", "api.celery_app", "worker", "--loglevel=info", "--concurrency=2"] 
