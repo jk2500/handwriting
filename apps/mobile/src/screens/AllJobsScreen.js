@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { ActivityIndicator, Text, Card, DataTable, Button, Appbar, IconButton, Searchbar, Menu, Chip } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { API_BASE_URL, formatDate, getButtonVisibility } from '../lib/utils';
+import { API_BASE_URL, formatDate } from '../lib/utils';
 import { getStatusDisplayName, getStatusIcon, getStatusColor } from '../lib/statusUtils';
 
 const AllJobsScreen = () => {
@@ -85,20 +85,6 @@ const AllJobsScreen = () => {
     filterJobs();
   }, [jobs, searchQuery, statusFilter, filterJobs]);
 
-  const handleCompile = async (jobId) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/compile`, { method: 'POST' });
-      if (!response.ok) throw new Error('Failed to trigger compile');
-      setTimeout(fetchJobs, 1000); // Refresh list after a short delay
-    } catch (e) {
-      console.error("Compile error:", e);
-    }
-  };
-  
-  const handleSegment = (jobId) => {
-    navigation.navigate('Segment', { jobId });
-  };
-
   const handleClearFilters = () => {
     setSearchQuery('');
     setStatusFilter(null);
@@ -139,8 +125,6 @@ const AllJobsScreen = () => {
         >
           <Menu.Item onPress={() => { setStatusFilter('pending'); setFilterMenuVisible(false); }} title="Pending" />
           <Menu.Item onPress={() => { setStatusFilter('uploaded'); setFilterMenuVisible(false); }} title="Uploaded" />
-          <Menu.Item onPress={() => { setStatusFilter('segmented'); setFilterMenuVisible(false); }} title="Segmented" />
-          <Menu.Item onPress={() => { setStatusFilter('compiling'); setFilterMenuVisible(false); }} title="Compiling" />
           <Menu.Item onPress={() => { setStatusFilter('completed'); setFilterMenuVisible(false); }} title="Completed" />
           <Menu.Item onPress={() => { setStatusFilter('failed'); setFilterMenuVisible(false); }} title="Failed" />
           <Menu.Item onPress={() => { setStatusFilter(null); setFilterMenuVisible(false); }} title="All Statuses" />
@@ -203,7 +187,6 @@ const AllJobsScreen = () => {
               </DataTable.Header>
 
               {paginatedJobs.map((job) => {
-                const { canSegment, canCompile } = getButtonVisibility(job);
                 return (
                   <DataTable.Row key={job.id}>
                     <DataTable.Cell>{job.input_pdf_filename || 'N/A'}</DataTable.Cell>
@@ -215,20 +198,6 @@ const AllJobsScreen = () => {
                     <DataTable.Cell>{formatDate(job.created_at)}</DataTable.Cell>
                     <DataTable.Cell numeric>
                       <View style={styles.actionsContainer}>
-                        {canSegment && (
-                          <IconButton
-                            icon="content-cut"
-                            size={20}
-                            onPress={() => handleSegment(job.id)}
-                          />
-                        )}
-                        {canCompile && (
-                          <IconButton
-                            icon="play-circle-outline"
-                            size={20}
-                            onPress={() => handleCompile(job.id)}
-                          />
-                        )}
                       </View>
                     </DataTable.Cell>
                   </DataTable.Row>

@@ -53,7 +53,9 @@ const SharedDocumentHandler = ({ onUploadSuccess }) => {
 
     // Set up event listener for when app receives a shared document while running
     // With expo-linking v5, we need to use addListener instead of addEventListener
-    const subscription = Linking.addListener('url', handleDocumentSharing);
+    // const subscription = Linking.addListener('url', handleDocumentSharing);
+    // Correction: expo-linking uses addEventListener
+    const subscription = Linking.addEventListener('url', handleDocumentSharing);
 
     return () => {
       // Clean up the listener

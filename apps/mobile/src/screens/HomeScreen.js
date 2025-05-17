@@ -3,7 +3,7 @@ import { View, StyleSheet, ScrollView } from 'react-native';
 import { ActivityIndicator, Text, Card, DataTable, Button, Snackbar } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import UploadForm from '../components/UploadForm';
-import { API_BASE_URL, formatDate, getButtonVisibility } from '../lib/utils';
+import { API_BASE_URL, formatDate } from '../lib/utils';
 import { getStatusDisplayName, getStatusIcon, getStatusColor } from '../lib/statusUtils';
 
 const HomeScreen = () => {
@@ -55,28 +55,6 @@ const HomeScreen = () => {
   // Get only the 4 most recent jobs
   const recentJobs = jobs.slice(0, 4);
 
-  const handleCompile = async (jobId) => {
-    setSnackbarMessage('Triggering compilation...');
-    setSnackbarVisible(true);
-    
-    try {
-      const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/compile`, { method: 'POST' });
-      if (!response.ok) throw new Error('Failed to trigger compile');
-      
-      setSnackbarMessage('Compilation started successfully');
-      setSnackbarVisible(true);
-      setTimeout(fetchJobs, 1000); // Refresh list
-    } catch (e) {
-      console.error("Compile error:", e);
-      setSnackbarMessage(`Compile failed: ${e.message}`);
-      setSnackbarVisible(true);
-    }
-  };
-  
-  const handleSegment = (jobId) => {
-    navigation.navigate('Segment', { jobId });
-  };
-  
   const handleViewAllJobs = () => {
     navigation.navigate('AllJobs');
   };
@@ -109,7 +87,6 @@ const HomeScreen = () => {
               </DataTable.Header>
 
               {recentJobs.map((job) => {
-                 const { canSegment, canCompile } = getButtonVisibility(job);
                  return (
                     <DataTable.Row key={job.id}>
                         <DataTable.Cell>{job.input_pdf_filename || 'N/A'}</DataTable.Cell>
@@ -120,8 +97,6 @@ const HomeScreen = () => {
                         </DataTable.Cell>
                         <DataTable.Cell numeric>
                           <View style={styles.actionsContainer}>
-                            {canSegment && <Button icon="content-cut" mode="text" compact onPress={() => handleSegment(job.id)}>Seg</Button>}
-                            {canCompile && <Button icon="play-circle-outline" mode="text" compact onPress={() => handleCompile(job.id)}>Compile</Button>}
                            </View>
                         </DataTable.Cell>
                     </DataTable.Row>

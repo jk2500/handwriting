@@ -5,7 +5,7 @@ import { PaperProvider, DefaultTheme } from 'react-native-paper';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeScreen from './src/screens/HomeScreen';
-import SegmentScreen from './src/screens/SegmentScreen';
+// import SegmentScreen from './src/screens/SegmentScreen';
 import AllJobsScreen from './src/screens/AllJobsScreen';
 import SharedDocumentHandler from './src/components/SharedDocumentHandler';
 
@@ -65,7 +65,7 @@ export default function App() {
             component={HomeScreen} 
             initialParams={getHomeScreenParams()}
           />
-          <Stack.Screen name="Segment" component={SegmentScreen} />
+          {/* <Stack.Screen name="Segment" component={SegmentScreen} /> */}
           <Stack.Screen 
             name="AllJobs" 
             component={AllJobsScreen}
