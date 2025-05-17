@@ -19,21 +19,12 @@ from dotenv import load_dotenv
 PROJECT_ROOT_FOR_MAIN = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOTENV_PATH_FOR_MAIN = os.path.join(PROJECT_ROOT_FOR_MAIN, ".env")
 
-# --- Debug: Print AWS Access Key ID from os.environ BEFORE dotenv --- 
-print(f"FastAPI main.py: AWS_ACCESS_KEY_ID from os.environ BEFORE dotenv: {os.getenv('AWS_ACCESS_KEY_ID')}")
-# --- End Debug ---
-
 if os.path.exists(DOTENV_PATH_FOR_MAIN):
-    print(f"FastAPI main.py: Loading .env from {DOTENV_PATH_FOR_MAIN} with override and verbose")
-    # Force override and enable verbose mode for python-dotenv
-    load_dotenv(dotenv_path=DOTENV_PATH_FOR_MAIN, override=True, verbose=True)
+    print(f"FastAPI main.py: Loading .env from {DOTENV_PATH_FOR_MAIN}")
+    load_dotenv(dotenv_path=DOTENV_PATH_FOR_MAIN) # Reverted to simple call
 else:
     print(f"Warning: FastAPI main.py could not find .env file at {DOTENV_PATH_FOR_MAIN}. Relying on shell environment variables.")
 # --- End .env loading ---
-
-# --- Debug: Print AWS Access Key ID from environment after dotenv --- 
-print(f"FastAPI main.py: AWS_ACCESS_KEY_ID from os.environ after dotenv: {os.getenv('AWS_ACCESS_KEY_ID')}")
-# --- End Debug ---
 
 # Add project root to sys.path to allow absolute imports from 'packages' etc.
 # __file__ is api/main.py, parent is api/, parent.parent is project root
