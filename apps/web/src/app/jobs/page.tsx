@@ -286,6 +286,7 @@ export default function JobsPage() {
                     // canDownloadInitialTex, // Commented out
                     // canDownloadFinalTex, // Commented out
                     canDownloadPdf,
+                    canDownloadTex,
                     canSegment,
                     canCompile,
                     canViewTex
@@ -368,6 +369,19 @@ export default function JobsPage() {
                           >
                             <FileText className="h-3.5 w-3.5" />
                             <span>PDF</span>
+                          </Button>
+                        )}
+                        {/* TeX Download Button - only show after compilation */}
+                        {canDownloadTex && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(`${API_BASE_URL}/jobs/${job.id}/tex`, '_blank')}
+                            title="Download TeX file"
+                            className="gap-1 button-hover-effect"
+                          >
+                            <FileText className="h-3.5 w-3.5" />
+                            <span>TeX</span>
                           </Button>
                         )}
                       </TableCell>

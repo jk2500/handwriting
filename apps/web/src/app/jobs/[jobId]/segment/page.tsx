@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '@/lib/utils';
@@ -27,6 +27,7 @@ import { TaskInstructions } from './components/TaskInstructions';
 export default function SegmentationPage() {
     const params = useParams();
     const jobId = params.jobId as string;
+    const router = useRouter();
 
     // --- State --- 
     const [currentTaskIndex, setCurrentTaskIndex] = useState<number>(0);
@@ -195,10 +196,7 @@ export default function SegmentationPage() {
                 throw new Error(`Failed to trigger compilation: ${compileResponse.status} ${errorText}`);
             }
             toast.success("Compilation process started.");
-            // To enable redirection after submission:
-            // 1. Import useRouter from 'next/navigation'
-            // 2. Add const router = useRouter(); in the component
-            // 3. Uncomment: router.push(`/jobs`);
+            router.push(`/jobs`);
 
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : String(error);

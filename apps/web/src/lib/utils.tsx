@@ -94,6 +94,9 @@ export const getButtonVisibility = (job: Job) => {
   // PDF button - available only when compilation_complete
   const canDownloadPdf = ['compilation_complete', 'completed'].includes(job.status);
   
+  // TeX download button - available when PDF is available
+  const canDownloadTex = canDownloadPdf;
+  
   // View TeX button - available after processing_vlm completes but NOT after compilation is complete
   const canViewTex = !['pending', 'rendering', 'processing_vlm', 'failed'].includes(job.status) && !canDownloadPdf;
   
@@ -111,6 +114,7 @@ export const getButtonVisibility = (job: Job) => {
     canDownloadInitialTex,
     canDownloadFinalTex,
     canDownloadPdf,
+    canDownloadTex,
     canSegment,
     canCompile,
     canViewTex

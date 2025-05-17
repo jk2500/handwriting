@@ -21,7 +21,7 @@ DOTENV_PATH_FOR_MAIN = os.path.join(PROJECT_ROOT_FOR_MAIN, ".env")
 
 if os.path.exists(DOTENV_PATH_FOR_MAIN):
     print(f"FastAPI main.py: Loading .env from {DOTENV_PATH_FOR_MAIN}")
-    load_dotenv(dotenv_path=DOTENV_PATH_FOR_MAIN) # Reverted to simple call
+    load_dotenv(dotenv_path=DOTENV_PATH_FOR_MAIN, override=True) # Kept override=True, removed verbose
 else:
     print(f"Warning: FastAPI main.py could not find .env file at {DOTENV_PATH_FOR_MAIN}. Relying on shell environment variables.")
 # --- End .env loading ---
