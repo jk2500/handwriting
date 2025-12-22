@@ -1,0 +1,27 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    texlive-latex-base \
+    texlive-latex-extra \
+    texlive-fonts-recommended \
+    latexmk \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt /app/
+COPY packages/ /app/packages/
+COPY api/ /app/api/
+
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir -e /app/packages/core_converter \
+    && pip install --no-cache-dir -e /app/api
+
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+EXPOSE 8000
+
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]

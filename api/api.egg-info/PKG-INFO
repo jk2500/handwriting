@@ -1,0 +1,16 @@
+Metadata-Version: 2.4
+Name: api
+Version: 0.1.0
+Summary: FastAPI backend for the Handwritten LaTeX Converter
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi
+Requires-Dist: uvicorn[standard]
+Requires-Dist: sqlalchemy
+Requires-Dist: psycopg2-binary
+Requires-Dist: alembic
+Requires-Dist: celery[redis]
+Requires-Dist: python-dotenv
+Requires-Dist: boto3
+Requires-Dist: openai
+Requires-Dist: Pillow
