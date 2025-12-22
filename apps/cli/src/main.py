@@ -54,6 +54,7 @@ def compile_latex_to_pdf(tex_filepath: str, output_directory: str) -> bool:
         f"-output-directory={output_directory}",
         "-interaction=nonstopmode",
         "-file-line-error",
+        "-no-shell-escape",
         tex_filepath
     ]
 

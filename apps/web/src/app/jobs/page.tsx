@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
@@ -141,11 +142,9 @@ export default function JobsPage() {
   useEffect(() => {
     setLoading(true);
     fetchJobs();
-    
-    // Set up polling for updates
-    const intervalId = setInterval(fetchJobs, 10000);
-    return () => clearInterval(intervalId);
   }, [fetchJobs]);
+
+  useVisibilityPolling(fetchJobs, 10000);
 
   // Use the status icon from utility
   const StatusIcon = ({ status }: { status: string }) => getStatusIcon(status);

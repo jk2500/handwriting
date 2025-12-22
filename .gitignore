@@ -1,5 +1,14 @@
 # Ignore environment variables file
 .env
+.env.*
+*.env
+*.env.*
+.env.local
+.env.*.local
+
+# Ignore Vercel local env files
+.vercel/.env*
+.vercel/*.local
 
 # Ignore Python cache and compiled files
 __pycache__/

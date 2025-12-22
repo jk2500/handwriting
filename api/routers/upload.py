@@ -3,11 +3,13 @@ from sqlalchemy.orm import Session
 from typing import Optional
 import uuid
 
-# Use relative imports (up one level)
 from .. import models, schemas
 from ..database import get_db
 from ..s3_utils import upload_to_s3
 from .. import tasks
+from ..config import get_logger
+
+logger = get_logger(__name__)
 
 DEFAULT_CONVERSION_MODEL = "o4-mini"
 
@@ -44,13 +46,14 @@ async def upload_pdf_and_start_job(
         db.add(new_job)
         db.commit()
         db.refresh(new_job)
-        print(f"Created DB record for job ID: {new_job.id}")
+        logger.info(f"Created job {new_job.id}")
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+        logger.exception(f"Database error creating job: {e}")
+        raise HTTPException(status_code=500, detail="Database error")
 
     tasks.process_handwriting_conversion.delay(job_id_str=str(new_job.id))
-    print(f"Successfully queued conversion task for job ID: {new_job.id}")
+    logger.info(f"Queued conversion task for job {new_job.id}")
 
     status_url = request.url_for('get_job_status', job_id=str(new_job.id))
     
@@ -58,4 +61,4 @@ async def upload_pdf_and_start_job(
         message="PDF accepted for processing.",
         job_id=new_job.id,
         status_url=str(status_url)
-    ) 
+    )
