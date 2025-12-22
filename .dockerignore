@@ -1,0 +1,68 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.env
+.env.*
+*.egg-info
+dist
+build
+eggs
+*.egg
+.pytest_cache
+.coverage
+htmlcov
+.tox
+.nox
+.mypy_cache
+.ruff_cache
+
+# Virtual environments
+venv
+.venv
+ENV
+env
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Testing
+tests
+*.test.py
+conftest.py
+pytest.ini
+
+# Documentation
+*.md
+docs
+LICENSE
+
+# Node (frontend)
+apps/web/node_modules
+apps/web/.next
+apps/web/out
+apps/mobile/node_modules
+
+# Vercel
+.vercel
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+logs
+
+# Temp files
+tmp
+temp
+*.tmp

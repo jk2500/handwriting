@@ -1,15 +1,27 @@
-PyMuPDF
-requests
-python-dotenv
-openai
-# --- Backend Dependencies ---
-fastapi
-uvicorn[standard] # Server for FastAPI
-SQLAlchemy # ORM
-psycopg2-binary # PostgreSQL driver
-Pillow # Add Pillow for image processing
-celery # Task Queue
-redis # Broker/Result Backend for Celery
-boto3 # AWS SDK for S3
-alembic # Database migrations
-python-multipart # For handling form data
+# Core dependencies
+PyMuPDF>=1.25.0,<2.0.0
+requests>=2.31.0,<3.0.0
+python-dotenv>=1.0.0,<2.0.0
+openai>=1.0.0,<2.0.0
+
+# Backend Framework
+fastapi>=0.115.0,<1.0.0
+uvicorn[standard]>=0.30.0,<1.0.0
+
+# Database
+SQLAlchemy>=2.0.0,<3.0.0
+psycopg2-binary>=2.9.0,<3.0.0
+alembic>=1.13.0,<2.0.0
+
+# Task Queue
+celery>=5.4.0,<6.0.0
+redis>=5.0.0,<6.0.0
+
+# AWS
+boto3>=1.35.0,<2.0.0
+
+# Image Processing
+Pillow>=10.0.0,<13.0.0
+
+# API utilities
+python-multipart>=0.0.9,<1.0.0

@@ -4,11 +4,16 @@ Utilities for interacting with AWS S3.
 
 import uuid
 import io
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 from fastapi import UploadFile
 import boto3
 from botocore.exceptions import ClientError
 
 from .config import get_s3_config, get_logger
+
+_executor = ThreadPoolExecutor(max_workers=4)
 
 logger = get_logger(__name__)
 
@@ -153,3 +158,16 @@ def upload_content_to_s3(content: bytes, s3_key: str, content_type: str | None =
     except Exception as e:
         logger.exception(f"Unexpected error during S3 upload to {s3_key}: {e}")
         return None
+
+
+async def download_from_s3_async(s3_key: str) -> bytes | None:
+    """Async version of download_from_s3."""
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(_executor, download_from_s3, s3_key)
+
+
+async def upload_content_to_s3_async(content: bytes, s3_key: str, content_type: str | None = None) -> str | None:
+    """Async version of upload_content_to_s3."""
+    loop = asyncio.get_event_loop()
+    func = partial(upload_content_to_s3, content, s3_key, content_type)
+    return await loop.run_in_executor(_executor, func)

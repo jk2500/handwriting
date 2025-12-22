@@ -77,9 +77,10 @@ class TestJobWorkflow:
 
     def test_completed_job_file_access(self, client, sample_completed_job):
         """Test accessing files for completed job."""
-        with patch("api.routers.jobs.download_from_s3") as mock_download:
-            mock_download.return_value = b"file content"
-            
+        async def mock_download(key):
+            return b"file content"
+        
+        with patch("api.routers.jobs.download_from_s3_async", side_effect=mock_download):
             tex_response = client.get(f"/jobs/{sample_completed_job.id}/tex")
             assert tex_response.status_code == 200
             

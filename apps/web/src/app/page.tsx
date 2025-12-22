@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
 import Link from 'next/link';
 import { UploadForm } from '@/components/UploadForm';
 import { Button } from '@/components/ui/button';
@@ -52,10 +53,9 @@ export default function Home() {
   useEffect(() => {
     setLoading(true);
     fetchJobs();
-    // Simple polling for updates every 10 seconds
-    const intervalId = setInterval(fetchJobs, 10000);
-    return () => clearInterval(intervalId);
   }, [fetchJobs]);
+
+  useVisibilityPolling(fetchJobs, 10000);
 
   // Get only the 4 most recent jobs for the home page
   const recentJobs = jobs.slice(0, 4);

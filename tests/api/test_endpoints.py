@@ -132,9 +132,10 @@ class TestJobsEndpoints:
 
     def test_get_job_tex_awaiting_segmentation(self, client, sample_job_with_tex):
         """Test getting TeX for job awaiting segmentation."""
-        with patch("api.routers.jobs.download_from_s3") as mock_download:
-            mock_download.return_value = b"\\documentclass{article}"
-            
+        async def mock_download(key):
+            return b"\\documentclass{article}"
+        
+        with patch("api.routers.jobs.download_from_s3_async", side_effect=mock_download):
             response = client.get(f"/jobs/{sample_job_with_tex.id}/tex")
             
             assert response.status_code == 200
@@ -148,18 +149,20 @@ class TestJobsEndpoints:
 
     def test_get_job_tex_completed(self, client, sample_completed_job):
         """Test getting TeX for completed job."""
-        with patch("api.routers.jobs.download_from_s3") as mock_download:
-            mock_download.return_value = b"\\documentclass{article}"
-            
+        async def mock_download(key):
+            return b"\\documentclass{article}"
+        
+        with patch("api.routers.jobs.download_from_s3_async", side_effect=mock_download):
             response = client.get(f"/jobs/{sample_completed_job.id}/tex")
             
             assert response.status_code == 200
 
     def test_get_job_pdf(self, client, sample_completed_job):
         """Test getting PDF for completed job."""
-        with patch("api.routers.jobs.download_from_s3") as mock_download:
-            mock_download.return_value = b"%PDF-1.4"
-            
+        async def mock_download(key):
+            return b"%PDF-1.4"
+        
+        with patch("api.routers.jobs.download_from_s3_async", side_effect=mock_download):
             response = client.get(f"/jobs/{sample_completed_job.id}/pdf")
             
             assert response.status_code == 200
@@ -308,9 +311,10 @@ class TestUpdateTexEndpoint:
 
     def test_update_tex_success(self, client, sample_job_with_tex):
         """Test successful TeX update."""
-        with patch("api.routers.jobs.upload_content_to_s3") as mock_upload:
-            mock_upload.return_value = "outputs/initial_tex/test.tex"
-            
+        async def mock_upload(content, s3_key, content_type):
+            return "outputs/initial_tex/test.tex"
+        
+        with patch("api.routers.jobs.upload_content_to_s3_async", side_effect=mock_upload):
             response = client.put(
                 f"/jobs/{sample_job_with_tex.id}/tex",
                 content="\\documentclass{article}\\begin{document}Updated\\end{document}",
@@ -333,9 +337,10 @@ class TestUpdateTexEndpoint:
 
     def test_update_tex_upload_failure(self, client, sample_job_with_tex):
         """Test TeX update when S3 upload fails."""
-        with patch("api.routers.jobs.upload_content_to_s3") as mock_upload:
-            mock_upload.return_value = None
-            
+        async def mock_upload(content, s3_key, content_type):
+            return None
+        
+        with patch("api.routers.jobs.upload_content_to_s3_async", side_effect=mock_upload):
             response = client.put(
                 f"/jobs/{sample_job_with_tex.id}/tex",
                 content="content",

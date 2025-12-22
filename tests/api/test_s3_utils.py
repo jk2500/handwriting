@@ -270,3 +270,34 @@ class TestUploadContentToS3:
             result = upload_content_to_s3(b"test content", "test/key.txt")
             
             assert result is None
+
+
+class TestAsyncS3Functions:
+    """Tests for async S3 utility functions."""
+
+    @pytest.mark.asyncio
+    async def test_download_from_s3_async(self, mock_s3_client):
+        """Test async download from S3."""
+        with patch("api.s3_utils.S3_BUCKET_NAME", "test-bucket"):
+            from api.s3_utils import download_from_s3_async
+            
+            mock_body = MagicMock()
+            mock_body.read.return_value = b"async content"
+            mock_body.__enter__ = MagicMock(return_value=mock_body)
+            mock_body.__exit__ = MagicMock(return_value=False)
+            mock_s3_client.get_object.return_value = {"Body": mock_body}
+            
+            result = await download_from_s3_async("test/key.txt")
+            
+            assert result == b"async content"
+
+    @pytest.mark.asyncio
+    async def test_upload_content_to_s3_async(self, mock_s3_client):
+        """Test async upload to S3."""
+        with patch("api.s3_utils.S3_BUCKET_NAME", "test-bucket"):
+            from api.s3_utils import upload_content_to_s3_async
+            
+            result = await upload_content_to_s3_async(b"async content", "test/key.txt", "text/plain")
+            
+            assert result == "test/key.txt"
+            mock_s3_client.upload_fileobj.assert_called_once()

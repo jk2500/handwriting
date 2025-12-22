@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Body
 from fastapi.responses import StreamingResponse, Response
 import io
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from sqlalchemy.orm import Session
 import uuid
 from typing import List
@@ -13,9 +15,11 @@ import shutil
 from PIL import Image
 import re
 
+_subprocess_executor = ThreadPoolExecutor(max_workers=2)
+
 from .. import models, schemas
 from ..database import get_db
-from ..s3_utils import download_from_s3, get_s3_presigned_url, upload_content_to_s3
+from ..s3_utils import download_from_s3, download_from_s3_async, get_s3_presigned_url, upload_content_to_s3, upload_content_to_s3_async
 from ..celery_utils import get_celery
 from ..tasks import compile_final_document
 from ..config import get_logger
@@ -85,7 +89,7 @@ async def get_job_tex(job_id: uuid.UUID, db: Session = Depends(get_db)):
         )
 
     logger.info(f"Serving {file_description} for job {job_id}")
-    tex_content_bytes = download_from_s3(tex_s3_path)
+    tex_content_bytes = await download_from_s3_async(tex_s3_path)
     if tex_content_bytes is None:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to retrieve {file_description} file from S3.")
 
@@ -114,7 +118,7 @@ async def get_job_pdf(job_id: uuid.UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Final PDF file path not found for this completed job.")
 
     logger.info(f"Serving Final PDF for job {job_id}")
-    pdf_content_bytes = download_from_s3(db_job.final_pdf_s3_path)
+    pdf_content_bytes = await download_from_s3_async(db_job.final_pdf_s3_path)
     if pdf_content_bytes is None:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to retrieve final PDF file from S3.")
 
@@ -359,7 +363,7 @@ async def generate_latex_preview_with_images(
             page_image_filename = os.path.basename(page_image_s3_path)
             temp_page_image_path = os.path.join(temp_dir, page_image_filename)
 
-            page_image_bytes = download_from_s3(page_image_s3_path)
+            page_image_bytes = await download_from_s3_async(page_image_s3_path)
             if not page_image_bytes:
                 continue
                 
@@ -488,7 +492,7 @@ async def update_job_tex(
     try:
         tex_content_bytes = tex_content.encode('utf-8')
         
-        upload_result = upload_content_to_s3(
+        upload_result = await upload_content_to_s3_async(
             content=tex_content_bytes,
             s3_key=tex_s3_path,
             content_type='text/plain'

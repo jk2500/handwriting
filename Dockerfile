@@ -2,24 +2,30 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy project files
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+
 COPY requirements.txt /app/
 COPY packages/ /app/packages/
 COPY api/ /app/api/
 
-# Install packages and dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install --no-cache-dir /app/packages/core_converter
-RUN pip install --no-cache-dir /app/api
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir /app/packages/core_converter \
+    && pip install --no-cache-dir /app/api
 
-# Set environment variable
+RUN chown -R appuser:appgroup /app
+
+USER appuser
+
 ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
 
-# Command to run the worker
-CMD ["celery", "-A", "api.celery_app", "worker", "--loglevel=info", "--concurrency=2"] 
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD celery -A api.celery_app inspect ping -d celery@$HOSTNAME || exit 1
+
+CMD ["celery", "-A", "api.celery_app", "worker", "--loglevel=info", "--concurrency=2"]
