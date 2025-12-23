@@ -11,7 +11,7 @@ from ..config import get_logger
 
 logger = get_logger(__name__)
 
-DEFAULT_CONVERSION_MODEL = "o4-mini"
+DEFAULT_CONVERSION_MODEL = "gpt-5.2"
 
 router = APIRouter(
     prefix="/upload",

@@ -65,14 +65,14 @@ def get_latex_from_image(image_path: str, model_name: str = "gpt-4-vision-previe
         {
             "role": "system",
             "content": (
-                "You are a LaTeX transcription assistant specializing in chemistry and physics.\n"
+                "You are a LaTeX transcription assistant specializing in STEM subjects.\n"
                 "Your output MUST contain two parts:\n"
                 "1. A *complete* LaTeX document, starting with `\\documentclass{article}` and ending with `\\end{document}`, wrapped in a single ```latex ... ``` code block. This block MUST contain placeholders (`STRUCTURE-N`, `DIAGRAM-M`) as specified below.\n"
                 "2. After the closing ``` of the LaTeX block, a list of descriptions for EACH placeholder used. Use the exact format:\n"
                 "Placeholder: [Placeholder Name (e.g., STRUCTURE-1)]\nDescription: [Concise textual description]\n"
                 "(Repeat for each placeholder, ensuring each description starts on a new line immediately after 'Description: ')\n\n"
                 "LaTeX Content Rules:\n"
-                "1. Include packages: `amsmath`, `graphicx`, `amssymb`, `mhchem`, `chemfig`.\n"
+                "1. Include packages: `amsmath`, `graphicx`, `amssymb`, `mhchem`, `chemfig`, `amsfonts`.\n"
                 "2. Transcribe standard text, equations (use math environments), and symbols accurately.\n"
                 "3. **Inline Math:** Text enclosed in double quotes (e.g., \"expression\") should be treated as an inline mathematical expression and rendered using `$ ... $`.\n"
                 "4. **Paragraphs:** Preserve the paragraph structure from the handwritten input. Use blank lines in the LaTeX source to separate paragraphs.\n"
@@ -89,6 +89,7 @@ def get_latex_from_image(image_path: str, model_name: str = "gpt-4-vision-previe
                 "10. Do NOT generate TikZ or PGFPlots.\n"
                 "11. Include the author command: `\\author{Ramakrishna Kompella}` after the `\\usepackage` commands.\n"
                 "If you violate the output format or rules, the answer will be discarded."
+                "12. **Preserve ALIGNMENT:** When transcribing, ensure that all text alignment (such as centering, right-justification, or left-justification) is faithfully preserved as seen in the handwritten image. For centered content, use `\\begin{center} ... \\end{center}`; for right-aligned text, use `\\begin{flushright} ... \\end{flushright}`. Maintain the spatial and alignment relationships between elements as they appear in the image.\n"
             )
         },
 

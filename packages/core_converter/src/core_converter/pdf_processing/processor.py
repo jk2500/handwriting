@@ -36,19 +36,13 @@ def render_pdf_pages_to_images(pdf_path: str, output_dir: str, dpi: int = DEFAUL
         print(f"Rendering {doc.page_count} pages from '{pdf_path}' to '{output_dir}'...")
 
         for i, page in enumerate(doc.pages()):
-            output_image_path = os.path.join(output_dir, f"page_{i}.png") # 0-indexed page number
+            output_image_path = os.path.join(output_dir, f"page_{i}.png")
             
-            # Render the page to a pixmap (image)
             pix = page.get_pixmap(dpi=dpi)
             
-            # Convert pixmap to Pillow Image
             img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
             
-            # Convert to grayscale
-            img_gray = img.convert('L')
-            
-            # Save the grayscale image as a PNG file
-            img_gray.save(output_image_path, "PNG")
+            img.save(output_image_path, "PNG", optimize=True)
             generated_image_paths.append(output_image_path)
             print(f"  - Saved {output_image_path}")
         

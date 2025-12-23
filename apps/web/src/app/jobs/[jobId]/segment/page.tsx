@@ -175,14 +175,6 @@ export default function SegmentationPage() {
                 toast.info("No segmentations to save.");
             }
             
-            const compileResponse = await fetch(`${API_BASE_URL}/jobs/${jobId}/compile`, {
-                method: 'POST'
-            });
-            if (!compileResponse.ok) {
-                const errorText = await compileResponse.text().catch(() => 'Failed to read error response');
-                throw new Error(`Failed to trigger compilation: ${compileResponse.status} ${errorText}`);
-            }
-            toast.success("Compilation process started.");
             router.push(`/jobs`);
 
         } catch (error: unknown) {
