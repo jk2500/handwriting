@@ -277,7 +277,7 @@ export default function SegmentationPage() {
                 useEnhanced: false,
             });
             toast.success('Using original image');
-        } catch (error) {
+        } catch {
             toast.error('Failed to update preference');
         }
         
@@ -303,7 +303,7 @@ export default function SegmentationPage() {
                 useEnhanced: true,
             });
             toast.success('Using AI enhanced image');
-        } catch (error) {
+        } catch {
             toast.error('Failed to update preference');
         }
         

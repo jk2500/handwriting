@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, CSSProperties, useEffect } from 'react';
+import React, { useMemo, CSSProperties } from 'react';
 import { BoundingBox } from '../hooks/useSegmentationData';
 
 // Type for the temporary box being drawn
