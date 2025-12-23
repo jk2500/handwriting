@@ -1,4 +1,11 @@
 services:
+  # Redis
+  - type: redis
+    name: handwriting-redis
+    region: oregon
+    plan: free
+    ipAllowList: []
+
   # FastAPI Backend
   - type: web
     name: handwriting-api
@@ -74,8 +81,3 @@ services:
         value: us-east-1
       - key: S3_BUCKET_NAME
         sync: false
-
-databases:
-  - name: handwriting-redis
-    plan: free
-    ipAllowList: []

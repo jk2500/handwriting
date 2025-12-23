@@ -16,13 +16,13 @@ Deploy a working application using Render (API + Worker + Redis), Supabase (Data
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Vercel (Frontend)                         │
-│                      Next.js App                             │
+│                    Vercel (Frontend)                        │
+│                      Next.js App                            │
 └─────────────────────────┬───────────────────────────────────┘
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    Render (Backend)                          │
+│                    Render (Backend)                         │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
 │  │  FastAPI    │  │   Redis     │  │   Celery Worker     │  │
 │  │  (API)      │◄─┤  (Queue)    │◄─┤   (LaTeX + AI)      │  │
