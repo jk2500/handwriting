@@ -3,7 +3,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
-import { CheckCircleIcon, ListChecks, Send } from 'lucide-react';
+import { CheckCircleIcon, ListChecks, Send, Sparkles } from 'lucide-react';
 import { SegmentationTaskItem } from '../hooks/useSegmentationData';
 
 interface TaskListProps {
@@ -14,6 +14,9 @@ interface TaskListProps {
     completionPercentage: number;
     onSave: () => void;
     isSaving: boolean;
+    onEnhance?: (label: string) => void;
+    enhancingLabel?: string | null;
+    enhancedLabels?: Set<string>;
 }
 
 export function TaskList({ 
@@ -23,7 +26,10 @@ export function TaskList({
     onSelectTask, 
     completionPercentage, 
     onSave, 
-    isSaving 
+    isSaving,
+    onEnhance,
+    enhancingLabel,
+    enhancedLabels = new Set()
 }: TaskListProps) {
     
     return (
@@ -82,6 +88,35 @@ export function TaskList({
                                                     <p className="text-xs text-muted-foreground mt-1 leading-relaxed break-words">
                                                         {task.description}
                                                     </p>
+                                                    {isCompleted && onEnhance && (
+                                                        <Button
+                                                            size="sm"
+                                                            variant={enhancedLabels.has(task.placeholder) ? "secondary" : "outline"}
+                                                            className="mt-2 h-7 text-xs gap-1"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                onEnhance(task.placeholder);
+                                                            }}
+                                                            disabled={enhancingLabel === task.placeholder}
+                                                        >
+                                                            {enhancingLabel === task.placeholder ? (
+                                                                <>
+                                                                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                                                    Enhancing...
+                                                                </>
+                                                            ) : enhancedLabels.has(task.placeholder) ? (
+                                                                <>
+                                                                    <Sparkles className="h-3 w-3 text-primary" />
+                                                                    Enhanced
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Sparkles className="h-3 w-3" />
+                                                                    Enhance with AI
+                                                                </>
+                                                            )}
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>

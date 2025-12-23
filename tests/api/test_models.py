@@ -266,3 +266,64 @@ class TestSegmentationModel:
         db_session.commit()
         
         assert seg.label is None
+
+    def test_segmentation_enhancement_fields(self, db_session, sample_job):
+        """Test segmentation enhancement fields."""
+        seg = models.Segmentation(
+            job_id=sample_job.id,
+            page_number=0,
+            x=0.1,
+            y=0.2,
+            width=0.3,
+            height=0.4,
+            label="DIAGRAM-1",
+        )
+        db_session.add(seg)
+        db_session.commit()
+        
+        assert seg.enhanced_s3_path is None
+        assert seg.use_enhanced is False
+
+    def test_segmentation_with_enhanced_path(self, db_session, sample_job):
+        """Test segmentation with enhanced S3 path."""
+        seg = models.Segmentation(
+            job_id=sample_job.id,
+            page_number=0,
+            x=0.1,
+            y=0.2,
+            width=0.3,
+            height=0.4,
+            label="DIAGRAM-1",
+            enhanced_s3_path="enhanced/job_id/DIAGRAM-1.png",
+            use_enhanced=True,
+        )
+        db_session.add(seg)
+        db_session.commit()
+        db_session.refresh(seg)
+        
+        assert seg.enhanced_s3_path == "enhanced/job_id/DIAGRAM-1.png"
+        assert seg.use_enhanced is True
+
+    def test_segmentation_toggle_use_enhanced(self, db_session, sample_job):
+        """Test toggling use_enhanced field."""
+        seg = models.Segmentation(
+            job_id=sample_job.id,
+            page_number=0,
+            x=0.1,
+            y=0.2,
+            width=0.3,
+            height=0.4,
+            label="DIAGRAM-1",
+            enhanced_s3_path="enhanced/path.png",
+            use_enhanced=False,
+        )
+        db_session.add(seg)
+        db_session.commit()
+        
+        assert seg.use_enhanced is False
+        
+        seg.use_enhanced = True
+        db_session.commit()
+        db_session.refresh(seg)
+        
+        assert seg.use_enhanced is True

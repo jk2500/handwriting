@@ -196,8 +196,10 @@ export default function EditJobPage() {
   };
 
   // Fetch initial TeX content and generate initial preview
+  const initialFetchDone = useRef(false);
   useEffect(() => {
-    if (!jobId) return;
+    if (!jobId || initialFetchDone.current) return;
+    initialFetchDone.current = true;
     setLoading(true);
     setError(null);
     fetch(`${API_BASE_URL}/jobs/${jobId}/tex`)

@@ -27,18 +27,18 @@ class TestUploadEndpoints:
 
     def test_upload_pdf_success(self, client, mock_s3_client, mock_celery_task):
         """Test successful PDF upload."""
-        with patch("api.s3_utils.S3_BUCKET_NAME", "test-bucket"):
-            with patch("api.s3_utils.upload_to_s3") as mock_upload:
-                mock_upload.return_value = "uploads/pdfs/test.pdf"
-                
-                files = {"file": ("test.pdf", b"%PDF-1.4", "application/pdf")}
-                response = client.post("/upload/pdf", files=files)
-                
-                assert response.status_code == 202
-                data = response.json()
-                assert "job_id" in data
-                assert "status_url" in data
-                assert data["message"] == "PDF accepted for processing."
+        async def mock_upload(file_obj, filename, content_type):
+            return "uploads/pdfs/test.pdf"
+        
+        with patch("api.routers.upload.upload_fileobj_to_s3_async", side_effect=mock_upload):
+            files = {"file": ("test.pdf", b"%PDF-1.4", "application/pdf")}
+            response = client.post("/upload/pdf", files=files)
+            
+            assert response.status_code == 202
+            data = response.json()
+            assert "job_id" in data
+            assert "status_url" in data
+            assert data["message"] == "PDF accepted for processing."
 
     def test_upload_pdf_no_filename(self, client):
         """Test upload fails without filename."""
@@ -57,9 +57,10 @@ class TestUploadEndpoints:
 
     def test_upload_pdf_s3_failure(self, client):
         """Test upload fails when S3 upload fails."""
-        with patch("api.routers.upload.upload_to_s3") as mock_upload:
-            mock_upload.return_value = None
-            
+        async def mock_upload(file_obj, filename, content_type):
+            return None
+        
+        with patch("api.routers.upload.upload_fileobj_to_s3_async", side_effect=mock_upload):
             files = {"file": ("test.pdf", b"%PDF-1.4", "application/pdf")}
             response = client.post("/upload/pdf", files=files)
             
@@ -67,9 +68,10 @@ class TestUploadEndpoints:
 
     def test_upload_pdf_with_model_name(self, client, mock_s3_client, mock_celery_task):
         """Test upload with custom model name."""
-        with patch("api.routers.upload.upload_to_s3") as mock_upload:
-            mock_upload.return_value = "uploads/pdfs/test.pdf"
-            
+        async def mock_upload(file_obj, filename, content_type):
+            return "uploads/pdfs/test.pdf"
+        
+        with patch("api.routers.upload.upload_fileobj_to_s3_async", side_effect=mock_upload):
             files = {"file": ("test.pdf", b"%PDF-1.4", "application/pdf")}
             data = {"model_name": "gpt-4o"}
             response = client.post("/upload/pdf", files=files, data=data)
@@ -348,3 +350,149 @@ class TestUpdateTexEndpoint:
             )
             
             assert response.status_code == 500
+
+
+class TestEnhancementEndpoints:
+    """Tests for enhancement endpoints."""
+
+    def test_enhance_job_not_found(self, client):
+        """Test enhancement for non-existent job."""
+        fake_id = uuid.uuid4()
+        response = client.post(
+            f"/jobs/{fake_id}/enhance",
+            json={"label": "DIAGRAM-1"}
+        )
+        assert response.status_code == 404
+
+    def test_enhance_segmentation_not_found_without_coords(self, client, sample_job_with_tex):
+        """Test enhancement when segmentation doesn't exist and no coords provided."""
+        response = client.post(
+            f"/jobs/{sample_job_with_tex.id}/enhance",
+            json={"label": "NONEXISTENT"}
+        )
+        assert response.status_code == 404
+        assert "not found" in response.json()["detail"]
+
+    def test_enhance_with_coordinates(self, client, sample_job_with_tex, sample_page_images, sample_image_bytes):
+        """Test enhancement with coordinates provided."""
+        async def mock_download(key):
+            return sample_image_bytes
+        
+        async def mock_upload(content, s3_key, content_type):
+            return s3_key
+        
+        async def mock_enhance(image_bytes, description, context=None):
+            return image_bytes
+        
+        with patch("api.routers.jobs.download_from_s3_async", side_effect=mock_download):
+            with patch("api.routers.jobs.upload_content_to_s3_async", side_effect=mock_upload):
+                with patch("api.routers.jobs.enhance_image", side_effect=mock_enhance):
+                    with patch("api.routers.jobs.get_s3_presigned_url", return_value="https://s3.example.com/test"):
+                        response = client.post(
+                            f"/jobs/{sample_job_with_tex.id}/enhance",
+                            json={
+                                "label": "DIAGRAM-1",
+                                "page_number": 0,
+                                "x": 0.1,
+                                "y": 0.1,
+                                "width": 0.2,
+                                "height": 0.2
+                            }
+                        )
+                        
+                        assert response.status_code == 200
+                        data = response.json()
+                        assert data["label"] == "DIAGRAM-1"
+                        assert "original_url" in data
+                        assert "enhanced_url" in data
+
+    def test_enhance_with_saved_segmentation(self, client, sample_job_with_tex, sample_page_images, sample_segmentations, sample_image_bytes):
+        """Test enhancement with existing segmentation."""
+        async def mock_download(key):
+            return sample_image_bytes
+        
+        async def mock_upload(content, s3_key, content_type):
+            return s3_key
+        
+        async def mock_enhance(image_bytes, description, context=None):
+            return image_bytes
+        
+        with patch("api.routers.jobs.download_from_s3_async", side_effect=mock_download):
+            with patch("api.routers.jobs.upload_content_to_s3_async", side_effect=mock_upload):
+                with patch("api.routers.jobs.enhance_image", side_effect=mock_enhance):
+                    with patch("api.routers.jobs.get_s3_presigned_url", return_value="https://s3.example.com/test"):
+                        response = client.post(
+                            f"/jobs/{sample_job_with_tex.id}/enhance",
+                            json={"label": "DIAGRAM-1"}
+                        )
+                        
+                        assert response.status_code == 200
+                        data = response.json()
+                        assert data["label"] == "DIAGRAM-1"
+                        assert data["segmentation_id"] == sample_segmentations[0].id
+
+    def test_enhance_page_not_found(self, client, sample_job_with_tex):
+        """Test enhancement when page image doesn't exist."""
+        response = client.post(
+            f"/jobs/{sample_job_with_tex.id}/enhance",
+            json={
+                "label": "DIAGRAM-1",
+                "page_number": 99,
+                "x": 0.1,
+                "y": 0.1,
+                "width": 0.2,
+                "height": 0.2
+            }
+        )
+        assert response.status_code == 404
+        assert "Page image" in response.json()["detail"]
+
+    def test_set_use_enhanced_success(self, client, sample_job_with_tex, sample_segmentations, db_session):
+        """Test setting use_enhanced flag."""
+        seg = sample_segmentations[0]
+        seg.enhanced_s3_path = "enhanced/test.png"
+        db_session.commit()
+        
+        response = client.patch(
+            f"/jobs/{sample_job_with_tex.id}/segmentations/{seg.id}/use-enhanced",
+            json={"use_enhanced": True}
+        )
+        
+        assert response.status_code == 200
+        assert response.json()["use_enhanced"] is True
+
+    def test_set_use_enhanced_no_enhanced_image(self, client, sample_job_with_tex, sample_segmentations):
+        """Test setting use_enhanced when no enhanced image exists."""
+        seg = sample_segmentations[0]
+        
+        response = client.patch(
+            f"/jobs/{sample_job_with_tex.id}/segmentations/{seg.id}/use-enhanced",
+            json={"use_enhanced": True}
+        )
+        
+        assert response.status_code == 400
+        assert "No enhanced image" in response.json()["detail"]
+
+    def test_set_use_enhanced_not_found(self, client, sample_job_with_tex):
+        """Test setting use_enhanced for non-existent segmentation."""
+        response = client.patch(
+            f"/jobs/{sample_job_with_tex.id}/segmentations/99999/use-enhanced",
+            json={"use_enhanced": True}
+        )
+        
+        assert response.status_code == 404
+
+    def test_set_use_enhanced_false(self, client, sample_job_with_tex, sample_segmentations, db_session):
+        """Test setting use_enhanced to false."""
+        seg = sample_segmentations[0]
+        seg.enhanced_s3_path = "enhanced/test.png"
+        seg.use_enhanced = True
+        db_session.commit()
+        
+        response = client.patch(
+            f"/jobs/{sample_job_with_tex.id}/segmentations/{seg.id}/use-enhanced",
+            json={"use_enhanced": False}
+        )
+        
+        assert response.status_code == 200
+        assert response.json()["use_enhanced"] is False

@@ -1,5 +1,5 @@
 import enum
-from sqlalchemy import Column, String, DateTime, Enum as SQLEnum, ForeignKey, Integer, Float, JSON
+from sqlalchemy import Column, String, DateTime, Enum as SQLEnum, ForeignKey, Integer, Float, JSON, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import UUID
@@ -65,6 +65,8 @@ class Segmentation(Base):
     width = Column(Float, nullable=False)
     height = Column(Float, nullable=False)
     label = Column(String, nullable=True)
+    enhanced_s3_path = Column(String, nullable=True)
+    use_enhanced = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     job = relationship("Job")

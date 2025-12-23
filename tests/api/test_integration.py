@@ -16,9 +16,10 @@ class TestJobWorkflow:
 
     def test_complete_job_creation_workflow(self, client, mock_celery_task):
         """Test complete workflow from upload to job creation."""
-        with patch("api.routers.upload.upload_to_s3") as mock_upload:
-            mock_upload.return_value = "uploads/pdfs/test.pdf"
-            
+        async def mock_upload(file_obj, filename, content_type):
+            return "uploads/pdfs/test.pdf"
+        
+        with patch("api.routers.upload.upload_fileobj_to_s3_async", side_effect=mock_upload):
             files = {"file": ("test.pdf", b"%PDF-1.4 test", "application/pdf")}
             response = client.post("/upload/pdf", files=files)
             
@@ -93,9 +94,10 @@ class TestErrorHandling:
 
     def test_s3_failure_during_upload(self, client):
         """Test handling S3 failure during upload."""
-        with patch("api.routers.upload.upload_to_s3") as mock_upload:
-            mock_upload.return_value = None
-            
+        async def mock_upload(file_obj, filename, content_type):
+            return None
+        
+        with patch("api.routers.upload.upload_fileobj_to_s3_async", side_effect=mock_upload):
             files = {"file": ("test.pdf", b"%PDF-1.4", "application/pdf")}
             response = client.post("/upload/pdf", files=files)
             
@@ -131,9 +133,10 @@ class TestConcurrentOperations:
 
     def test_multiple_job_creation(self, client, mock_celery_task):
         """Test creating multiple jobs concurrently."""
-        with patch("api.routers.upload.upload_to_s3") as mock_upload:
-            mock_upload.return_value = "uploads/pdfs/test.pdf"
-            
+        async def mock_upload(file_obj, filename, content_type):
+            return "uploads/pdfs/test.pdf"
+        
+        with patch("api.routers.upload.upload_fileobj_to_s3_async", side_effect=mock_upload):
             job_ids = []
             for i in range(5):
                 files = {"file": (f"test_{i}.pdf", b"%PDF-1.4", "application/pdf")}
@@ -173,9 +176,10 @@ class TestDataIntegrity:
 
     def test_job_data_persists(self, client, db_session, mock_celery_task):
         """Test that job data persists correctly."""
-        with patch("api.routers.upload.upload_to_s3") as mock_upload:
-            mock_upload.return_value = "uploads/pdfs/important.pdf"
-            
+        async def mock_upload(file_obj, filename, content_type):
+            return "uploads/pdfs/important.pdf"
+        
+        with patch("api.routers.upload.upload_fileobj_to_s3_async", side_effect=mock_upload):
             files = {"file": ("important.pdf", b"%PDF-1.4", "application/pdf")}
             data = {"model_name": "gpt-4o"}
             response = client.post("/upload/pdf", files=files, data=data)

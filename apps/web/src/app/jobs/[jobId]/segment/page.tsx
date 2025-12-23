@@ -24,6 +24,7 @@ import { useDrawing } from './hooks/useDrawing';
 import { TaskList } from './components/TaskList';
 import { AnnotationCanvas } from './components/AnnotationCanvas';
 import { TaskInstructions } from './components/TaskInstructions';
+import { EnhanceModal } from './components/EnhanceModal';
 
 export default function SegmentationPage() {
     const params = useParams();
@@ -35,6 +36,17 @@ export default function SegmentationPage() {
     const [currentPageIndex, setCurrentPageIndex] = useState<number>(0);
     const [isSaving, setIsSaving] = useState<boolean>(false);
     const containerRef = useRef<HTMLDivElement>(null);
+    
+    // Enhancement state
+    const [enhanceModalOpen, setEnhanceModalOpen] = useState(false);
+    const [enhancingLabel, setEnhancingLabel] = useState<string | null>(null);
+    const [enhanceResult, setEnhanceResult] = useState<{
+        label: string;
+        originalUrl: string;
+        enhancedUrl: string;
+        segmentationId: number;
+    } | null>(null);
+    const [enhancedLabels, setEnhancedLabels] = useState<Set<string>>(new Set());
 
     // --- Custom Hooks --- 
     const {
@@ -186,6 +198,92 @@ export default function SegmentationPage() {
         }
     };
 
+    const handleEnhance = async (label: string) => {
+        setEnhancingLabel(label);
+        setEnhanceModalOpen(true);
+        setEnhanceResult(null);
+
+        const box = boundingBoxes.find(b => b.label === label);
+        if (!box) {
+            toast.error('Bounding box not found for this label');
+            setEnhanceModalOpen(false);
+            setEnhancingLabel(null);
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/enhance`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    label,
+                    page_number: box.pageNumber,
+                    x: box.x,
+                    y: box.y,
+                    width: box.width,
+                    height: box.height
+                }),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Enhancement failed');
+            }
+
+            const result = await response.json();
+            setEnhanceResult(result);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            toast.error(`Enhancement failed: ${errorMessage}`);
+        } finally {
+            setEnhancingLabel(null);
+        }
+    };
+
+    const handleSelectOriginal = async () => {
+        if (!enhanceResult) return;
+        
+        try {
+            await fetch(`${API_BASE_URL}/jobs/${jobId}/segmentations/${enhanceResult.segmentationId}/use-enhanced`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ use_enhanced: false }),
+            });
+            
+            setEnhancedLabels(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(enhanceResult.label);
+                return newSet;
+            });
+            toast.success('Using original image');
+        } catch (error) {
+            toast.error('Failed to update preference');
+        }
+        
+        setEnhanceModalOpen(false);
+        setEnhanceResult(null);
+    };
+
+    const handleSelectEnhanced = async () => {
+        if (!enhanceResult) return;
+        
+        try {
+            await fetch(`${API_BASE_URL}/jobs/${jobId}/segmentations/${enhanceResult.segmentationId}/use-enhanced`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ use_enhanced: true }),
+            });
+            
+            setEnhancedLabels(prev => new Set(prev).add(enhanceResult.label));
+            toast.success('Using AI enhanced image');
+        } catch (error) {
+            toast.error('Failed to update preference');
+        }
+        
+        setEnhanceModalOpen(false);
+        setEnhanceResult(null);
+    };
+
     // --- Render --- 
     if (dataLoading) {
         return (
@@ -251,6 +349,9 @@ export default function SegmentationPage() {
                         completionPercentage={completionPercentage}
                         onSave={saveSegmentations}
                         isSaving={isSaving}
+                        onEnhance={handleEnhance}
+                        enhancingLabel={enhancingLabel}
+                        enhancedLabels={enhancedLabels}
                     />
                 </div>
 
@@ -315,6 +416,21 @@ export default function SegmentationPage() {
                     </Card>
                 </div>
             </div>
+
+            {/* Enhancement Modal */}
+            <EnhanceModal
+                isOpen={enhanceModalOpen}
+                onClose={() => {
+                    setEnhanceModalOpen(false);
+                    setEnhanceResult(null);
+                }}
+                label={enhanceResult?.label || enhancingLabel || ''}
+                originalUrl={enhanceResult?.originalUrl || null}
+                enhancedUrl={enhanceResult?.enhancedUrl || null}
+                isLoading={enhancingLabel !== null && !enhanceResult}
+                onSelectOriginal={handleSelectOriginal}
+                onSelectEnhanced={handleSelectEnhanced}
+            />
         </div>
     );
 }

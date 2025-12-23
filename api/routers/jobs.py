@@ -24,6 +24,7 @@ from ..s3_utils import download_from_s3, download_from_s3_async, get_s3_presigne
 from ..celery_utils import get_celery
 from ..tasks import compile_final_document
 from ..config import get_logger
+from ..services.image_enhancer import enhance_image
 
 logger = get_logger(__name__)
 
@@ -176,9 +177,12 @@ async def create_segmentations(job_id: uuid.UUID, segmentations_in: List[schemas
         db_segmentation = models.Segmentation(job_id=job_id, **seg_in.model_dump())
         segmentation_objects.append(db_segmentation)
     if not segmentation_objects:
+        db_job.status = models.JobStatus.SEGMENTATION_COMPLETE
+        db.commit()
         return []
     try:
         db.add_all(segmentation_objects)
+        db_job.status = models.JobStatus.SEGMENTATION_COMPLETE
         db.commit()
         for seg in segmentation_objects:
             db.refresh(seg)
@@ -379,6 +383,17 @@ async def generate_latex_preview_with_images(
                     page_bytes_map[page_num] = data
         
         for seg in segmentations:
+            safe_label = re.sub(r'[^a-zA-Z0-9_\-]', '_', seg.label)
+            cropped_filename = f"{safe_label}.png"
+            cropped_image_output_path = os.path.join(figures_dir, cropped_filename)
+            
+            if seg.use_enhanced and seg.enhanced_s3_path:
+                enhanced_bytes = await download_from_s3_async(seg.enhanced_s3_path)
+                if enhanced_bytes:
+                    with open(cropped_image_output_path, 'wb') as f:
+                        f.write(enhanced_bytes)
+                    continue
+            
             page_bytes = page_bytes_map.get(seg.page_number)
             if not page_bytes:
                 continue
@@ -396,16 +411,29 @@ async def generate_latex_preview_with_images(
                         continue
                     crop_box = (int(x1), int(y1), int(x2), int(y2))
                     cropped_img = img.crop(crop_box)
-                    safe_label = re.sub(r'[^a-zA-Z0-9_\-]', '_', seg.label)
-                    cropped_filename = f"{safe_label}.png"
-                    cropped_image_output_path = os.path.join(figures_dir, cropped_filename)
                     cropped_img.save(cropped_image_output_path, "PNG")
             except Exception as crop_err:
                 logger.warning(f"Error cropping segmentation {seg.label}: {crop_err}")
 
+        modified_tex_content = tex_content
+        for seg in segmentations:
+            safe_label = re.sub(r'[^a-zA-Z0-9_\-]', '_', seg.label)
+            figure_path = f"figures/{safe_label}.png"
+            if os.path.exists(os.path.join(temp_dir, figure_path)):
+                placeholder_comment = f"% PLACEHOLDER: {seg.label}"
+                figure_include_code = (
+                    f"\\begin{{figure}}[htbp]\n"
+                    f"  \\centering\n"
+                    f"  \\includegraphics[width=0.8\\textwidth]{{{figure_path}}}\n"
+                    f"  \\caption{{{seg.label.replace('_', ' ')}}}\n"
+                    f"  \\label{{fig:{seg.label.lower()}}}\n"
+                    f"\\end{{figure}}"
+                )
+                modified_tex_content = modified_tex_content.replace(placeholder_comment, figure_include_code)
+
         tex_path = os.path.join(temp_dir, "preview.tex")
         with open(tex_path, 'w', encoding='utf-8') as f:
-            f.write(tex_content)
+            f.write(modified_tex_content)
 
         compile_cmd = [
             "latexmk", 
@@ -532,3 +560,150 @@ async def update_job_tex(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update TeX file."
         )
+
+
+@router.post("/{job_id}/enhance", response_model=schemas.EnhanceResponse, tags=["Jobs", "Enhancement"])
+async def enhance_segmentation(
+    job_id: uuid.UUID,
+    request: schemas.EnhanceRequest,
+    db: Session = Depends(get_db)
+):
+    """Enhance a segmented image using AI to create a clean, professional version."""
+    db_job = db.query(models.Job).filter(models.Job.id == job_id).first()
+    if db_job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found")
+    
+    segmentation = db.query(models.Segmentation).filter(
+        models.Segmentation.job_id == job_id,
+        models.Segmentation.label == request.label
+    ).first()
+    
+    use_request_coords = request.page_number is not None and request.x is not None and request.y is not None and request.width is not None and request.height is not None
+    
+    if segmentation is None and not use_request_coords:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail=f"Segmentation with label '{request.label}' not found. Provide coordinates if not saved yet."
+        )
+    
+    page_number = request.page_number if use_request_coords else segmentation.page_number
+    seg_x = request.x if use_request_coords else segmentation.x
+    seg_y = request.y if use_request_coords else segmentation.y
+    seg_width = request.width if use_request_coords else segmentation.width
+    seg_height = request.height if use_request_coords else segmentation.height
+    
+    page_image = db.query(models.JobPageImage).filter(
+        models.JobPageImage.job_id == job_id,
+        models.JobPageImage.page_number == page_number
+    ).first()
+    
+    if page_image is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Page image for page {page_number} not found"
+        )
+    
+    description = ""
+    if db_job.segmentation_tasks and request.label in db_job.segmentation_tasks:
+        description = db_job.segmentation_tasks[request.label]
+    
+    page_bytes = await download_from_s3_async(page_image.s3_path)
+    if not page_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to download page image"
+        )
+    
+    try:
+        with Image.open(io.BytesIO(page_bytes)) as img:
+            img_width, img_height = img.size
+            x1 = int(seg_x * img_width)
+            y1 = int(seg_y * img_height)
+            x2 = int((seg_x + seg_width) * img_width)
+            y2 = int((seg_y + seg_height) * img_height)
+            x1, y1 = max(0, x1), max(0, y1)
+            x2, y2 = min(img_width, x2), min(img_height, y2)
+            
+            cropped = img.crop((x1, y1, x2, y2))
+            
+            crop_buffer = io.BytesIO()
+            cropped.save(crop_buffer, format='PNG')
+            cropped_bytes = crop_buffer.getvalue()
+    except Exception as e:
+        logger.exception(f"Error cropping image for enhancement: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to crop image for enhancement"
+        )
+    
+    original_s3_key = f"cropped/{job_id}/{request.label}.png"
+    await upload_content_to_s3_async(
+        content=cropped_bytes,
+        s3_key=original_s3_key,
+        content_type='image/png'
+    )
+    original_url = get_s3_presigned_url(original_s3_key)
+    
+    enhanced_url = ""
+    enhancement_error = None
+    try:
+        enhanced_bytes = await enhance_image(cropped_bytes, description)
+        
+        enhanced_s3_key = f"enhanced/{job_id}/{request.label}.png"
+        upload_result = await upload_content_to_s3_async(
+            content=enhanced_bytes,
+            s3_key=enhanced_s3_key,
+            content_type='image/png'
+        )
+        
+        if upload_result:
+            enhanced_url = get_s3_presigned_url(enhanced_s3_key) or ""
+            if segmentation:
+                segmentation.enhanced_s3_path = enhanced_s3_key
+                db.commit()
+        else:
+            enhancement_error = "Failed to upload enhanced image"
+    except Exception as e:
+        logger.exception(f"Error enhancing image: {e}")
+        enhancement_error = str(e)
+    
+    if enhancement_error:
+        logger.warning(f"Enhancement failed for {request.label}: {enhancement_error}")
+    
+    return schemas.EnhanceResponse(
+        label=request.label,
+        original_url=original_url or "",
+        enhanced_url=enhanced_url,
+        segmentation_id=segmentation.id if segmentation else None
+    )
+
+
+@router.patch("/{job_id}/segmentations/{segmentation_id}/use-enhanced", tags=["Jobs", "Enhancement"])
+async def set_use_enhanced(
+    job_id: uuid.UUID,
+    segmentation_id: int,
+    request: schemas.UseEnhancedRequest,
+    db: Session = Depends(get_db)
+):
+    """Set whether to use the enhanced version of a segmentation."""
+    segmentation = db.query(models.Segmentation).filter(
+        models.Segmentation.id == segmentation_id,
+        models.Segmentation.job_id == job_id
+    ).first()
+    
+    if segmentation is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Segmentation not found"
+        )
+    
+    if request.use_enhanced and not segmentation.enhanced_s3_path:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No enhanced image available for this segmentation"
+        )
+    
+    segmentation.use_enhanced = request.use_enhanced
+    db.commit()
+    
+    return {"message": "Updated successfully", "use_enhanced": segmentation.use_enhanced}

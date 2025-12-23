@@ -287,3 +287,74 @@ class TestSegmentationTaskSchemas:
             tasks=[]
         )
         assert len(response.tasks) == 0
+
+
+class TestEnhancementSchemas:
+    """Tests for Enhancement-related schemas."""
+
+    def test_enhance_request_with_label_only(self):
+        """Test EnhanceRequest with only label."""
+        request = schemas.EnhanceRequest(label="DIAGRAM-1")
+        assert request.label == "DIAGRAM-1"
+        assert request.page_number is None
+        assert request.x is None
+
+    def test_enhance_request_with_coordinates(self):
+        """Test EnhanceRequest with coordinates."""
+        request = schemas.EnhanceRequest(
+            label="DIAGRAM-1",
+            page_number=0,
+            x=0.1,
+            y=0.2,
+            width=0.3,
+            height=0.4
+        )
+        assert request.label == "DIAGRAM-1"
+        assert request.page_number == 0
+        assert request.x == 0.1
+        assert request.width == 0.3
+
+    def test_enhance_request_coordinate_bounds(self):
+        """Test EnhanceRequest coordinate validation."""
+        with pytest.raises(ValidationError):
+            schemas.EnhanceRequest(
+                label="DIAGRAM-1",
+                x=-0.1
+            )
+        
+        with pytest.raises(ValidationError):
+            schemas.EnhanceRequest(
+                label="DIAGRAM-1",
+                x=1.5
+            )
+
+    def test_enhance_response(self):
+        """Test EnhanceResponse schema."""
+        response = schemas.EnhanceResponse(
+            label="DIAGRAM-1",
+            original_url="https://s3.example.com/original.png",
+            enhanced_url="https://s3.example.com/enhanced.png",
+            segmentation_id=42
+        )
+        assert response.label == "DIAGRAM-1"
+        assert "original" in response.original_url
+        assert "enhanced" in response.enhanced_url
+        assert response.segmentation_id == 42
+
+    def test_enhance_response_without_segmentation_id(self):
+        """Test EnhanceResponse without segmentation_id."""
+        response = schemas.EnhanceResponse(
+            label="DIAGRAM-1",
+            original_url="https://s3.example.com/original.png",
+            enhanced_url="https://s3.example.com/enhanced.png",
+            segmentation_id=None
+        )
+        assert response.segmentation_id is None
+
+    def test_use_enhanced_request(self):
+        """Test UseEnhancedRequest schema."""
+        request = schemas.UseEnhancedRequest(use_enhanced=True)
+        assert request.use_enhanced is True
+        
+        request = schemas.UseEnhancedRequest(use_enhanced=False)
+        assert request.use_enhanced is False

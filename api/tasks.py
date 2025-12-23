@@ -275,6 +275,19 @@ def compile_final_document(self, job_id_str: str):
 
             cropped_image_paths = {}
             for seg in segmentations:
+                safe_label = re.sub(r'[^a-zA-Z0-9_\-]', '_', seg.label)
+                cropped_filename = f"{safe_label}.png"
+                cropped_image_output_path = os.path.join(figures_dir, cropped_filename)
+                
+                if seg.use_enhanced and seg.enhanced_s3_path:
+                    logger.info(f"Job {job_id}: Using enhanced image for {seg.label}")
+                    enhanced_bytes = download_from_s3(seg.enhanced_s3_path)
+                    if enhanced_bytes:
+                        with open(cropped_image_output_path, 'wb') as f:
+                            f.write(enhanced_bytes)
+                        cropped_image_paths[seg.label] = f"figures/{cropped_filename}"
+                        continue
+                
                 page_image_record = page_images_map.get(seg.page_number)
                 if not page_image_record:
                     logger.warning(f"Could not find page image for page {seg.page_number}. Skipping.")
@@ -307,9 +320,6 @@ def compile_final_document(self, job_id_str: str):
                             continue
                         crop_box = (int(x1), int(y1), int(x2), int(y2))
                         cropped_img = img.crop(crop_box)
-                        safe_label = re.sub(r'[^a-zA-Z0-9_\-]', '_', seg.label)
-                        cropped_filename = f"{safe_label}.png"
-                        cropped_image_output_path = os.path.join(figures_dir, cropped_filename)
                         cropped_img.save(cropped_image_output_path, "PNG")
                         cropped_image_paths[seg.label] = f"figures/{cropped_filename}"
                         logger.debug(f"Cropped {seg.label} from page {seg.page_number}")

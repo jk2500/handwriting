@@ -88,6 +88,8 @@ class SegmentationCreate(SegmentationBase):
 class Segmentation(SegmentationBase):
     id: int
     job_id: uuid.UUID
+    enhanced_s3_path: Optional[str] = None
+    use_enhanced: bool = False
     created_at: datetime.datetime
     updated_at: Optional[datetime.datetime] = None
 
@@ -95,6 +97,26 @@ class Segmentation(SegmentationBase):
         populate_by_name = True
         from_attributes = True
         use_enum_values = True
+
+
+class EnhanceRequest(BaseModel):
+    label: str = Field(..., description="Segmentation label to enhance (e.g., DIAGRAM-1)")
+    page_number: Optional[int] = Field(None, description="Page number (0-indexed) if not yet saved")
+    x: Optional[float] = Field(None, ge=0.0, le=1.0)
+    y: Optional[float] = Field(None, ge=0.0, le=1.0)
+    width: Optional[float] = Field(None, gt=0.0, le=1.0)
+    height: Optional[float] = Field(None, gt=0.0, le=1.0)
+
+
+class EnhanceResponse(BaseModel):
+    label: str
+    original_url: str
+    enhanced_url: str
+    segmentation_id: Optional[int] = None
+
+
+class UseEnhancedRequest(BaseModel):
+    use_enhanced: bool = Field(..., description="Whether to use the enhanced version")
 
 # --- Segmentation Task Schemas (for UI) ---
 class SegmentationTaskItem(BaseModel):

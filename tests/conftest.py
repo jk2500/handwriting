@@ -228,9 +228,11 @@ This is a test document with an equation:
 
 @pytest.fixture
 def sample_image_bytes() -> bytes:
-    """Return minimal PNG image bytes for testing."""
-    return (
-        b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01'
-        b'\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00'
-        b'\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82'
-    )
+    """Return a valid PNG image bytes for testing (100x100 red image)."""
+    from PIL import Image
+    import io
+    
+    img = Image.new('RGB', (100, 100), color='red')
+    buffer = io.BytesIO()
+    img.save(buffer, format='PNG')
+    return buffer.getvalue()
