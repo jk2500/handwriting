@@ -1,0 +1,81 @@
+services:
+  # FastAPI Backend
+  - type: web
+    name: handwriting-api
+    runtime: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: CELERY_BROKER_URL
+        fromService:
+          name: handwriting-redis
+          type: redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND_URL
+        fromService:
+          name: handwriting-redis
+          type: redis
+          property: connectionString
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: IMAGE_ENHANCER
+        value: gemini
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        value: us-east-1
+      - key: S3_BUCKET_NAME
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: PYTHON_VERSION
+        value: "3.10.12"
+
+  # Celery Worker (Docker for LaTeX)
+  - type: worker
+    name: handwriting-worker
+    runtime: docker
+    region: oregon
+    plan: starter
+    dockerfilePath: ./Dockerfile.worker
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: CELERY_BROKER_URL
+        fromService:
+          name: handwriting-redis
+          type: redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND_URL
+        fromService:
+          name: handwriting-redis
+          type: redis
+          property: connectionString
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: IMAGE_ENHANCER
+        value: gemini
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        value: us-east-1
+      - key: S3_BUCKET_NAME
+        sync: false
+
+databases:
+  - name: handwriting-redis
+    plan: free
+    ipAllowList: []

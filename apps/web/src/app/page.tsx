@@ -196,37 +196,33 @@ export default function Home() {
                       <TableCell className="text-sm text-muted-foreground">{job.model_used || 'N/A'}</TableCell>
                       <TableCell className="text-right space-x-2">
                         {canViewTex && (
-                          <Link href={`/jobs/${job.id}/edit`} passHref legacyBehavior>
-                            <Button
-                              asChild
-                              variant="outline"
-                              size="sm"
-                              title="View and edit TeX file"
-                              className="gap-1.5"
-                            >
-                              <a>
-                                <FileText className="h-3.5 w-3.5" />
-                                <span>View TeX</span>
-                              </a>
-                            </Button>
-                          </Link>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            title="View and edit TeX file"
+                            className="gap-1.5"
+                            asChild
+                          >
+                            <Link href={`/jobs/${job.id}/edit`}>
+                              <FileText className="h-3.5 w-3.5" />
+                              <span>View TeX</span>
+                            </Link>
+                          </Button>
                         )}
                         
                         {canSegment && (
-                          <Link href={`/jobs/${job.id}/segment`} passHref legacyBehavior>
-                            <Button
-                              asChild
-                              variant="default"
-                              size="sm"
-                              title="Segment this job"
-                              className="gap-1.5 shadow-sm"
-                            >
-                              <a>
-                                <Scissors className="h-3.5 w-3.5" />
-                                <span>Segment</span>
-                              </a>
-                            </Button>
-                          </Link>
+                          <Button
+                            variant="default"
+                            size="sm"
+                            title="Segment this job"
+                            className="gap-1.5 shadow-sm"
+                            asChild
+                          >
+                            <Link href={`/jobs/${job.id}/segment`}>
+                              <Scissors className="h-3.5 w-3.5" />
+                              <span>Segment</span>
+                            </Link>
+                          </Button>
                         )}
                         
                         {canCompile && (

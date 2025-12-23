@@ -64,15 +64,11 @@ def get_celery_config() -> dict:
 @lru_cache()
 def get_cors_origins() -> list:
     """Get CORS allowed origins."""
-    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
-    vercel_url = os.getenv("VERCEL_URL")
-    vercel_branch_url = os.getenv("VERCEL_BRANCH_URL")
+    cors_origins = os.getenv("CORS_ORIGINS", "")
+    if cors_origins:
+        return [origin.strip() for origin in cors_origins.split(",") if origin.strip()]
     
-    origins = [frontend_url]
-    if vercel_url:
-        origins.append(f"https://{vercel_url}")
-    if vercel_branch_url:
-        origins.append(f"https://{vercel_branch_url}")
-    origins.append("https://handwriting-omega.vercel.app")
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    origins = [frontend_url, "http://localhost:3000"]
     
     return list(filter(None, set(origins)))
