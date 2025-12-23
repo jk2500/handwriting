@@ -334,11 +334,13 @@ class TestEnhancementSchemas:
             label="DIAGRAM-1",
             original_url="https://s3.example.com/original.png",
             enhanced_url="https://s3.example.com/enhanced.png",
+            enhanced_s3_path="enhanced/job-id/DIAGRAM-1.png",
             segmentation_id=42
         )
         assert response.label == "DIAGRAM-1"
         assert "original" in response.original_url
         assert "enhanced" in response.enhanced_url
+        assert response.enhanced_s3_path == "enhanced/job-id/DIAGRAM-1.png"
         assert response.segmentation_id == 42
 
     def test_enhance_response_without_segmentation_id(self):
@@ -347,9 +349,11 @@ class TestEnhancementSchemas:
             label="DIAGRAM-1",
             original_url="https://s3.example.com/original.png",
             enhanced_url="https://s3.example.com/enhanced.png",
+            enhanced_s3_path="enhanced/job-id/DIAGRAM-1.png",
             segmentation_id=None
         )
         assert response.segmentation_id is None
+        assert response.enhanced_s3_path == "enhanced/job-id/DIAGRAM-1.png"
 
     def test_use_enhanced_request(self):
         """Test UseEnhancedRequest schema."""
