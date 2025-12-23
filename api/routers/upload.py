@@ -5,7 +5,7 @@ import uuid
 
 from .. import models, schemas
 from ..database import get_db
-from ..s3_utils import upload_to_s3
+from ..s3_utils import upload_fileobj_to_s3_async
 from .. import tasks
 from ..config import get_logger
 
@@ -30,7 +30,7 @@ async def upload_pdf_and_start_job(
     if file.content_type != "application/pdf":
         raise HTTPException(status_code=400, detail="Invalid file type. Only PDF is allowed.")
 
-    s3_path = upload_to_s3(file, file.filename)
+    s3_path = await upload_fileobj_to_s3_async(file.file, file.filename, file.content_type)
     if not s3_path:
         raise HTTPException(status_code=500, detail="Failed to upload file to S3 storage.")
 

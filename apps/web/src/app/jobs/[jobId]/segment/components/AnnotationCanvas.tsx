@@ -40,12 +40,9 @@ export function AnnotationCanvas({
     drawingEventHandlers,
     onRemoveBox
 }: AnnotationCanvasProps) {
-    // const [imageElement, setImageElement] = useState<HTMLImageElement | null>(null);
-    // const [canvasSize, setCanvasSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
 
     // Render existing boxes as absolutely positioned divs
     const renderedBoxDivs = useMemo(() => {
-        // Convert relative box coordinates (0-1) to image pixel coordinates
         return boxesToRender.map((box, i) => {
             const pixelX = box.x * renderedImageSize.width + imageOffset.x;
             const pixelY = box.y * renderedImageSize.height + imageOffset.y;
@@ -58,22 +55,26 @@ export function AnnotationCanvas({
                 top: `${pixelY}px`,
                 width: `${pixelWidth}px`,
                 height: `${pixelHeight}px`,
-                border: '2px solid blue', // Example style for saved boxes
-                backgroundColor: 'rgba(0, 0, 255, 0.1)',
+                border: '2px solid oklch(0.50 0.12 195)',
+                backgroundColor: 'oklch(0.50 0.12 195 / 0.1)',
                 color: 'white',
                 fontSize: '12px',
-                zIndex: 5, // Below drawing box
-                cursor: 'pointer' // Indicate clickable for delete
+                zIndex: 5,
+                cursor: 'pointer',
+                borderRadius: '4px',
+                transition: 'all 0.15s ease',
             };
             
             const textStyle: CSSProperties = {
                  position: 'absolute',
-                 left: '2px',
-                 top: '2px',
-                 padding: '1px 3px',
-                 backgroundColor: 'rgba(0, 0, 150, 0.7)',
-                 borderRadius: '2px',
-                 pointerEvents: 'none' // Don't block clicks on the box
+                 left: '4px',
+                 top: '4px',
+                 padding: '2px 6px',
+                 backgroundColor: 'oklch(0.40 0.12 195)',
+                 borderRadius: '4px',
+                 pointerEvents: 'none',
+                 fontSize: '11px',
+                 fontWeight: 500,
             }
 
             return (
@@ -81,47 +82,23 @@ export function AnnotationCanvas({
                     key={`box-${box.label}-${i}`} 
                     style={boxStyle} 
                     onClick={(e) => {
-                         e.stopPropagation(); // Prevent triggering draw start on the container
+                         e.stopPropagation();
                          onRemoveBox(i);
                     }}
                     title={`Click to remove ${box.label}`}
+                    className="hover:border-red-500 hover:bg-red-500/10"
                  >
                     <span style={textStyle}>{box.label}</span>
-                    {/* Optional: Add a small explicit delete button 
-                    <button 
-                         onClick={(e) => { e.stopPropagation(); onRemoveBox(i); }} 
-                         style={{ position: 'absolute', right: 0, top: 0, background: 'red', border: 'none', color:'white', cursor:'pointer', padding:'0 2px' }}
-                    >
-                         <TrashIcon size={10}/>
-                    </button>
-                    */}
                  </div>
             );
         });
     }, [boxesToRender, renderedImageSize, imageOffset, onRemoveBox]);
 
-    useEffect(() => {
-        if (containerRef.current) {
-            // const container = containerRef.current;
-            const img = new window.Image();
-            img.src = imageObj?.src || '';
-            img.onload = () => {
-                // setImageElement(img);
-            };
-        }
-    }, [imageObj, containerRef]);
-
-    useEffect(() => {
-        if (containerRef.current) {
-            // const container = containerRef.current;
-            // setCanvasSize({ width: container.clientWidth, height: container.clientHeight });
-        }
-    }, [containerRef]);
 
     return (
         <div 
             ref={containerRef}
-            className="h-full w-full flex justify-center items-center overflow-hidden bg-muted/30 relative touch-none"
+            className="h-full w-full flex justify-center items-center overflow-hidden bg-muted/20 relative touch-none"
             style={{ width: containerSize.width, height: containerSize.height }}
             {...drawingEventHandlers}
         >
@@ -138,7 +115,9 @@ export function AnnotationCanvas({
                             position: 'absolute',
                             left: `${imageOffset.x}px`,
                             top: `${imageOffset.y}px`,
-                            pointerEvents: 'none'
+                            pointerEvents: 'none',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 20px -4px oklch(0.25 0.02 30 / 0.15)',
                         }}
                         draggable="false"
                         onDragStart={(e) => e.preventDefault()}
@@ -147,10 +126,11 @@ export function AnnotationCanvas({
                     <div style={newBoxStyle} /> 
                 </React.Fragment>
             ) : (
-                 <div className="h-full flex flex-col justify-center items-center text-muted-foreground">
-                    <p className="font-medium">Loading page image...</p>
+                 <div className="h-full flex flex-col justify-center items-center text-muted-foreground gap-3">
+                    <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary/30 border-t-primary"></div>
+                    <p className="font-medium text-sm">Loading page image...</p>
                  </div>
             )}
         </div>
     );
-} 
+}

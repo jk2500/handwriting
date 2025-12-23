@@ -13,7 +13,7 @@ from botocore.exceptions import ClientError
 
 from .config import get_s3_config, get_logger
 
-_executor = ThreadPoolExecutor(max_workers=4)
+_executor = ThreadPoolExecutor(max_workers=10)
 
 logger = get_logger(__name__)
 
@@ -170,4 +170,40 @@ async def upload_content_to_s3_async(content: bytes, s3_key: str, content_type: 
     """Async version of upload_content_to_s3."""
     loop = asyncio.get_event_loop()
     func = partial(upload_content_to_s3, content, s3_key, content_type)
+    return await loop.run_in_executor(_executor, func)
+
+
+def upload_fileobj_to_s3(file_obj, filename: str, content_type: str | None = None) -> str | None:
+    """Uploads a file object to the configured S3 bucket."""
+    if not _is_bucket_configured():
+        return None
+    
+    unique_key = f"uploads/pdfs/{uuid.uuid4()}_{filename}"
+    logger.info(f"Uploading '{filename}' to S3 key '{unique_key}'")
+    
+    extra_args = {}
+    if content_type:
+        extra_args['ContentType'] = content_type
+    
+    try:
+        s3_client.upload_fileobj(
+            file_obj, 
+            S3_BUCKET_NAME, 
+            unique_key,
+            ExtraArgs=extra_args
+        )
+        logger.info(f"Successfully uploaded {filename}")
+        return unique_key
+    except ClientError as e:
+        logger.error(f"S3 ClientError uploading {filename}: {e}")
+        return None
+    except Exception as e:
+        logger.exception(f"Unexpected error during S3 upload: {e}")
+        return None
+
+
+async def upload_fileobj_to_s3_async(file_obj, filename: str, content_type: str | None = None) -> str | None:
+    """Async version of upload_fileobj_to_s3."""
+    loop = asyncio.get_event_loop()
+    func = partial(upload_fileobj_to_s3, file_obj, filename, content_type)
     return await loop.run_in_executor(_executor, func)

@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FileText, Scissors, PlayCircle, ArrowUpDown, RotateCcw, AlertCircle } from "lucide-react";
+import { FileText, Scissors, PlayCircle, ArrowUpDown, RotateCcw, AlertCircle, Search, Filter } from "lucide-react";
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -36,7 +36,7 @@ export default function JobsPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc'); // Default to newest first
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const fetchJobs = useCallback(async () => {
     setError(null);
@@ -46,7 +46,6 @@ export default function JobsPage() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data: Job[] = await response.json();
-      // Sort by creation date (newest first by default)
       data.sort((a, b) => {
         if (sortOrder === 'desc') {
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -67,11 +66,9 @@ export default function JobsPage() {
     }
   }, [sortOrder, searchTerm, statusFilter]);
 
-  // Apply filters to jobs
   const applyFilters = (jobs: Job[], search: string, status: string) => {
     let filtered = [...jobs];
     
-    // Apply search filter
     if (search) {
       const searchLower = search.toLowerCase();
       filtered = filtered.filter(job => 
@@ -80,7 +77,6 @@ export default function JobsPage() {
       );
     }
     
-    // Apply status filter
     if (status !== 'all') {
       filtered = filtered.filter(job => job.status === status);
     }
@@ -88,20 +84,17 @@ export default function JobsPage() {
     setFilteredJobs(filtered);
   };
 
-  // Handle search term change
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newSearchTerm = e.target.value;
     setSearchTerm(newSearchTerm);
     applyFilters(allJobs, newSearchTerm, statusFilter);
   };
 
-  // Handle status filter change
   const handleStatusFilter = (value: string) => {
     setStatusFilter(value);
     applyFilters(allJobs, searchTerm, value);
   };
 
-  // Toggle sort order
   const toggleSortOrder = () => {
     const newOrder = sortOrder === 'desc' ? 'asc' : 'desc';
     setSortOrder(newOrder);
@@ -117,7 +110,6 @@ export default function JobsPage() {
     setFilteredJobs(sortedJobs);
   };
 
-  // Handle compilation
   const handleCompile = async (jobId: string) => {
     const toastId = toast.loading('Compiling document...');
     try {
@@ -130,7 +122,6 @@ export default function JobsPage() {
       }
       
       toast.success('Compilation triggered', { id: toastId });
-      // Refresh job list shortly after
       setTimeout(fetchJobs, 1000);
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : String(e);
@@ -146,46 +137,43 @@ export default function JobsPage() {
 
   useVisibilityPolling(fetchJobs, 10000);
 
-  // Use the status icon from utility
   const StatusIcon = ({ status }: { status: string }) => getStatusIcon(status);
 
-  // Derived states for button disabling based on job status
-  // const canDownloadInitialTex = job.status !== JobStatus.Pending && job.status !== JobStatus.Processing;
-  // const canDownloadFinalTex = job.status === JobStatus.Completed || job.status === JobStatus.Failed || job.status === JobStatus.CompletedWithWarnings;
-
-  // const handleCopyJobId = () => {
-  //   navigator.clipboard.writeText(job.id)
-  // }
-
   return (
-    <div className="container mx-auto px-4 py-8 page-animation">
+    <div className="container mx-auto px-4 py-10 page-animation">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-4">All Conversion Jobs</h1>
+        <h1 className="text-3xl font-bold mb-2 tracking-tight gradient-text">All Conversion Jobs</h1>
         <p className="text-muted-foreground">View and manage all your LaTeX conversion jobs.</p>
       </div>
 
       {/* Filters & Controls */}
-      <Card className="mb-6">
+      <Card className="mb-6 shadow-sm border-0 bg-card/80 backdrop-blur-sm">
         <CardHeader className="pb-3">
-          <CardTitle>Filters & Controls</CardTitle>
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <Filter className="h-4 w-4 text-primary" />
+            Filters & Controls
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div>
-              <Label htmlFor="search" className="mb-2 block">Search Jobs</Label>
-              <Input
-                id="search"
-                placeholder="Search by filename or ID..."
-                value={searchTerm}
-                onChange={handleSearch}
-                className="max-w-full"
-              />
+              <Label htmlFor="search" className="mb-2 block text-sm font-medium">Search Jobs</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="search"
+                  placeholder="Search by filename or ID..."
+                  value={searchTerm}
+                  onChange={handleSearch}
+                  className="pl-9 bg-background"
+                />
+              </div>
             </div>
             
             <div>
-              <Label htmlFor="status-filter" className="mb-2 block">Filter by Status</Label>
+              <Label htmlFor="status-filter" className="mb-2 block text-sm font-medium">Filter by Status</Label>
               <Select value={statusFilter} onValueChange={handleStatusFilter}>
-                <SelectTrigger id="status-filter">
+                <SelectTrigger id="status-filter" className="bg-background">
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -208,16 +196,16 @@ export default function JobsPage() {
               <Button 
                 variant="outline" 
                 onClick={toggleSortOrder} 
-                className="gap-1 flex-1"
+                className="gap-1.5 flex-1"
               >
                 <ArrowUpDown className="h-4 w-4" />
-                Sort: {sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}
+                {sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}
               </Button>
               
               <Button 
                 variant="secondary" 
                 onClick={() => fetchJobs()}
-                className="gap-1"
+                className="gap-1.5"
               >
                 <RotateCcw className="h-4 w-4" />
                 Refresh
@@ -229,18 +217,21 @@ export default function JobsPage() {
 
       {/* Loading State */}
       {loading && allJobs.length === 0 && (
-        <div className="flex justify-center items-center p-12">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        <div className="flex justify-center items-center p-16">
+          <div className="flex flex-col items-center gap-4">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary/30 border-t-primary"></div>
+            <p className="text-sm text-muted-foreground">Loading jobs...</p>
+          </div>
         </div>
       )}
       
       {/* Error State */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 rounded-lg p-4 my-4 flex items-start gap-3">
+        <div className="bg-destructive/5 border border-destructive/20 text-destructive rounded-xl p-4 my-4 flex items-start gap-3">
           <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
           <div>
             <h3 className="font-medium">Error loading jobs</h3>
-            <p className="text-sm">{error}</p>
+            <p className="text-sm opacity-90">{error}</p>
           </div>
         </div>
       )}
@@ -250,30 +241,30 @@ export default function JobsPage() {
         <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
           <Table>
             {filteredJobs.length === 0 && !loading ? (
-              <TableCaption>
+              <TableCaption className="py-8">
                 {searchTerm || statusFilter !== 'all' 
                   ? 'No jobs match your filters. Try adjusting your search criteria.'
                   : 'No jobs found. Upload a PDF to get started.'}
               </TableCaption>
             ) : (
-              <TableCaption>
+              <TableCaption className="py-4">
                 Showing {filteredJobs.length} {filteredJobs.length === 1 ? 'job' : 'jobs'}
                 {searchTerm || statusFilter !== 'all' ? ' matching your filters' : ''}
               </TableCaption>
             )}
             <TableHeader>
-              <TableRow>
-                <TableHead className="w-[250px]">Filename</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Model</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+              <TableRow className="hover:bg-transparent border-b bg-muted/30">
+                <TableHead className="w-[250px] font-semibold">Filename</TableHead>
+                <TableHead className="font-semibold">Status</TableHead>
+                <TableHead className="font-semibold">Created</TableHead>
+                <TableHead className="font-semibold">Model</TableHead>
+                <TableHead className="text-right font-semibold">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredJobs.length === 0 && !loading ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                     {searchTerm || statusFilter !== 'all' 
                       ? 'No jobs match your filters.'
                       : 'No jobs found.'}
@@ -282,8 +273,6 @@ export default function JobsPage() {
               ) : (
                 filteredJobs.map((job) => {
                   const { 
-                    // canDownloadInitialTex, // Commented out
-                    // canDownloadFinalTex, // Commented out
                     canDownloadPdf,
                     canDownloadTex,
                     canSegment,
@@ -292,7 +281,7 @@ export default function JobsPage() {
                   } = getButtonVisibility(job);
 
                   return (
-                    <TableRow key={job.id} className="hover:bg-muted/40 transition-colors">
+                    <TableRow key={job.id} className="table-row-hover">
                       <TableCell className="font-medium truncate max-w-[250px]" title={job.input_pdf_filename || 'N/A'}>
                         {job.input_pdf_filename || 'N/A'}
                       </TableCell>
@@ -304,10 +293,9 @@ export default function JobsPage() {
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell>{formatDate(job.created_at)}</TableCell>
+                      <TableCell className="text-muted-foreground">{formatDate(job.created_at)}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{job.model_used || 'N/A'}</TableCell>
                       <TableCell className="text-right space-x-2">
-                        {/* View TeX Button */}
                         {canViewTex && (
                           <Link href={`/jobs/${job.id}/edit`} passHref legacyBehavior>
                             <Button
@@ -315,7 +303,7 @@ export default function JobsPage() {
                               variant="outline"
                               size="sm"
                               title="View and edit TeX file"
-                              className="gap-1 button-hover-effect"
+                              className="gap-1.5"
                             >
                               <a>
                                 <FileText className="h-3.5 w-3.5" />
@@ -325,7 +313,6 @@ export default function JobsPage() {
                           </Link>
                         )}
                         
-                        {/* Segmentation Button */}
                         {canSegment && (
                           <Link href={`/jobs/${job.id}/segment`} passHref legacyBehavior>
                             <Button
@@ -333,7 +320,7 @@ export default function JobsPage() {
                               variant="default"
                               size="sm"
                               title="Segment this job"
-                              className="gap-1"
+                              className="gap-1.5 shadow-sm"
                             >
                               <a>
                                 <Scissors className="h-3.5 w-3.5" />
@@ -343,41 +330,39 @@ export default function JobsPage() {
                           </Link>
                         )}
                         
-                        {/* Compile Button - only show after segmentation is complete */}
                         {canCompile && (
                           <Button
                             variant="secondary"
                             size="sm"
                             onClick={() => handleCompile(job.id)}
                             title="Compile segmented document"
-                            className="gap-1 button-hover-effect"
+                            className="gap-1.5"
                           >
                             <PlayCircle className="h-3.5 w-3.5" />
                             <span>Compile</span>
                           </Button>
                         )}
                         
-                        {/* PDF Button - only show after compilation */}
                         {canDownloadPdf && (
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => window.open(`${API_BASE_URL}/jobs/${job.id}/pdf`, '_blank')}
                             title="Download PDF file"
-                            className="gap-1 button-hover-effect"
+                            className="gap-1.5"
                           >
                             <FileText className="h-3.5 w-3.5" />
                             <span>PDF</span>
                           </Button>
                         )}
-                        {/* TeX Download Button - only show after compilation */}
+                        
                         {canDownloadTex && (
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => window.open(`${API_BASE_URL}/jobs/${job.id}/tex`, '_blank')}
                             title="Download TeX file"
-                            className="gap-1 button-hover-effect"
+                            className="gap-1.5"
                           >
                             <FileText className="h-3.5 w-3.5" />
                             <span>TeX</span>

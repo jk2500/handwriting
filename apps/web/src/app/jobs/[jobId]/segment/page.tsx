@@ -12,7 +12,8 @@ import {
     ArrowLeftIcon,
     PenToolIcon,
     AlertCircle,
-    Loader2
+    Loader2,
+    Layers
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -33,7 +34,7 @@ export default function SegmentationPage() {
     const [currentTaskIndex, setCurrentTaskIndex] = useState<number>(0);
     const [currentPageIndex, setCurrentPageIndex] = useState<number>(0);
     const [isSaving, setIsSaving] = useState<boolean>(false);
-    const containerRef = useRef<HTMLDivElement>(null); // Ref for canvas container
+    const containerRef = useRef<HTMLDivElement>(null);
 
     // --- Custom Hooks --- 
     const {
@@ -53,12 +54,10 @@ export default function SegmentationPage() {
         renderedImageSize
     } = useImageLoader({ pageImages, currentPageIndex, containerRef });
     
-    // Calculate image offset within the container (assuming centered)
     const imageOffset = useMemo(() => {
         if (!containerSize.width || !containerSize.height || !renderedImageSize.width || !renderedImageSize.height) {
             return { x: 0, y: 0 };
         }
-        // Calculate offset needed to center the rendered image in the container
         return {
             x: (containerSize.width - renderedImageSize.width) / 2,
             y: (containerSize.height - renderedImageSize.height) / 2
@@ -88,7 +87,6 @@ export default function SegmentationPage() {
     });
 
     // --- Effects --- 
-    // Reset task index if tasks change
     useEffect(() => {
         setCurrentTaskIndex(0);
     }, [segmentationTasks]);
@@ -100,7 +98,6 @@ export default function SegmentationPage() {
             : 0
     ), [completedTasks, segmentationTasks]);
 
-    // Filter boxes for the current page
     const currentBoxesToRender = useMemo(() => 
         boundingBoxes.filter(box => box.pageNumber === currentPage?.page_number)
     , [boundingBoxes, currentPage]);
@@ -122,38 +119,31 @@ export default function SegmentationPage() {
         setCurrentTaskIndex(index);
     };
 
-    // Handles removing a box based on its index *within the filtered list for the current page*
     const handleRemoveBoxOnPage = (indexOnPage: number) => {
-        // Find the actual box data corresponding to the index on the current page
         const boxToRemove = currentBoxesToRender[indexOnPage];
         if (!boxToRemove) return;
 
-        // Find the index of this box in the *original* full boundingBoxes array
         const originalIndex = boundingBoxes.findIndex(
             b => b.label === boxToRemove.label && 
                  b.pageNumber === boxToRemove.pageNumber &&
-                 b.x === boxToRemove.x && // Use coords for better matching if labels repeat
+                 b.x === boxToRemove.x &&
                  b.y === boxToRemove.y &&
                  b.width === boxToRemove.width &&
                  b.height === boxToRemove.height
-                 // Potentially add a unique ID if available from API
         );
 
         if (originalIndex !== -1) {
-            removeBoundingBoxByIndex(originalIndex); // Call hook with the correct original index
+            removeBoundingBoxByIndex(originalIndex);
         } else {
             console.warn("Could not find original index for box to remove", boxToRemove);
             toast.error("Error removing box.");
         }
     };
     
-    // Save segmentations to API only
     const saveSegmentations = async () => {
         setIsSaving(true);
         try {
             if (boundingBoxes.length > 0) {
-                
-                // *** Add log to inspect state directly ***
                 console.log("[page.tsx] Raw boundingBoxes state before map:", JSON.stringify(boundingBoxes, null, 2));
                 
                 const apiSegmentations = boundingBoxes.map(box => ({
@@ -171,7 +161,6 @@ export default function SegmentationPage() {
                     body: JSON.stringify(apiSegmentations),
                 });
                 if (!response.ok) {
-                     // Improved error logging
                      let errorBody = "Could not read error response.";
                      try {
                          errorBody = await response.json(); 
@@ -183,11 +172,9 @@ export default function SegmentationPage() {
                 }
                 toast.success("Segmentations saved successfully.");
             } else {
-                // If no boxes, still show a success message or just do nothing?
                 toast.info("No segmentations to save.");
             }
             
-            // Trigger compilation process
             const compileResponse = await fetch(`${API_BASE_URL}/jobs/${jobId}/compile`, {
                 method: 'POST'
             });
@@ -211,7 +198,10 @@ export default function SegmentationPage() {
     if (dataLoading) {
         return (
             <div className="container mx-auto px-4 py-8 flex justify-center items-center h-[80vh]">
-                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                    <p className="text-muted-foreground">Loading segmentation data...</p>
+                </div>
             </div>
         );
     }
@@ -219,17 +209,15 @@ export default function SegmentationPage() {
     if (dataError) {
         return (
             <div className="container mx-auto px-4 py-8">
-                 <Link href="/jobs" className="text-primary hover:text-primary/80 flex items-center gap-1 mb-4">
+                 <Link href="/jobs" className="text-primary hover:text-primary/80 flex items-center gap-1 mb-4 transition-colors">
                     <ArrowLeftIcon size={16} />
                     <span>Back to Jobs</span>
                 </Link>
-                <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg p-4 my-6 flex items-start gap-3">
+                <div className="bg-destructive/5 border border-destructive/20 text-destructive rounded-xl p-4 my-6 flex items-start gap-3">
                     <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
                     <div>
                         <h3 className="font-medium">Error loading segmentation data</h3>
-                        <p className="text-sm">{dataError}</p>
-                        {/* Optional: Add a retry button? */}
-                        {/* <Button variant="destructive" size="sm" onClick={refetchData} className="mt-2">Retry</Button> */}
+                        <p className="text-sm opacity-90">{dataError}</p>
                     </div>
                 </div>
             </div>
@@ -240,16 +228,23 @@ export default function SegmentationPage() {
         <div className="container mx-auto px-4 py-8 page-animation">
             {/* Header */} 
             <div className="mb-8">
-                <Link href="/jobs" className="text-primary hover:text-primary/80 flex items-center gap-1 mb-4">
+                <Link href="/jobs" className="text-primary hover:text-primary/80 flex items-center gap-1 mb-4 transition-colors">
                     <ArrowLeftIcon size={16} />
                     <span>Back to Jobs</span>
                 </Link>
-                <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                    Document Segmentation
-                </h1>
-                <p className="text-muted-foreground">
-                    Job ID: {jobId}
-                </p>
+                <div className="flex items-center gap-3 mb-2">
+                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                        <Layers className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                        <h1 className="text-2xl font-bold tracking-tight gradient-text">
+                            Document Segmentation
+                        </h1>
+                        <p className="text-sm text-muted-foreground">
+                            Job ID: {jobId.substring(0, 12)}...
+                        </p>
+                    </div>
+                </div>
             </div>
 
             {/* Main Content Grid */} 
@@ -269,10 +264,10 @@ export default function SegmentationPage() {
 
                 {/* Column 2: Image Viewer & Annotation Area */} 
                 <div className="lg:col-span-3">
-                    <Card className="overflow-hidden h-full">
+                    <Card className="overflow-hidden h-full shadow-sm border-0 bg-card/80 backdrop-blur-sm">
                         {/* Canvas Header */} 
-                        <CardHeader className="bg-muted/50 pb-3 flex flex-row justify-between items-center space-y-0">
-                            <CardTitle className="flex items-center gap-2">
+                        <CardHeader className="bg-muted/30 pb-3 flex flex-row justify-between items-center space-y-0 border-b">
+                            <CardTitle className="flex items-center gap-2 text-base font-semibold">
                                 <PenToolIcon size={18} className="text-primary" />
                                 Annotation Area
                             </CardTitle>
@@ -283,12 +278,12 @@ export default function SegmentationPage() {
                                     variant="outline"
                                     onClick={goToPrevPage}
                                     disabled={currentPageIndex === 0 || pageImages.length <= 1}
-                                    className="flex items-center gap-1 button-hover-effect"
+                                    className="flex items-center gap-1"
                                 >
                                     <ChevronLeftIcon size={16} />
                                     <span className="sr-only md:not-sr-only">Previous</span>
                                 </Button>
-                                <span className="text-sm text-muted-foreground px-1">
+                                <span className="text-sm text-muted-foreground px-2 font-medium">
                                     Page {pageImages.length > 0 ? currentPageIndex + 1 : 0} of {pageImages.length}
                                 </span>
                                 <Button
@@ -296,7 +291,7 @@ export default function SegmentationPage() {
                                     variant="outline"
                                     onClick={goToNextPage}
                                     disabled={currentPageIndex >= pageImages.length - 1 || pageImages.length <= 1}
-                                    className="flex items-center gap-1 button-hover-effect"
+                                    className="flex items-center gap-1"
                                 >
                                     <span className="sr-only md:not-sr-only">Next</span>
                                     <ChevronRightIcon size={16} />
@@ -306,7 +301,7 @@ export default function SegmentationPage() {
                         
                         {/* Canvas Area */} 
                         <CardContent className="p-0">
-                            <div className="bg-muted/50 flex-grow relative h-[60vh]" ref={containerRef}>
+                            <div className="bg-muted/20 flex-grow relative h-[60vh]" ref={containerRef}>
                                 <AnnotationCanvas
                                     containerRef={containerRef}
                                     containerSize={containerSize}
@@ -321,7 +316,7 @@ export default function SegmentationPage() {
                             </div>
                             
                             {/* Task Instructions Footer */} 
-                            <div className="p-4 border-t border-border">
+                            <div className="p-4 border-t border-border bg-card">
                                 <TaskInstructions currentTask={currentTask} />
                             </div>
                         </CardContent>
@@ -330,16 +325,4 @@ export default function SegmentationPage() {
             </div>
         </div>
     );
-} 
-
-// Helper CSS class (if needed, otherwise remove or place in global CSS)
-// Add this to your global CSS or a relevant CSS module if you want the animation:
-/*
-@keyframes page-fade-in {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
 }
-.page-animation {
-    animation: page-fade-in 0.5s ease-out forwards;
-}
-*/ 

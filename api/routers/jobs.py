@@ -15,7 +15,8 @@ import shutil
 from PIL import Image
 import re
 
-_subprocess_executor = ThreadPoolExecutor(max_workers=2)
+_subprocess_executor = ThreadPoolExecutor(max_workers=4)
+_image_cache: dict[str, bytes] = {}
 
 from .. import models, schemas
 from ..database import get_db
@@ -272,15 +273,16 @@ async def generate_latex_preview(
             temp_file_path
         ]
 
+        async def run_latex_compile(cmd, cwd=None):
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(
+                _subprocess_executor,
+                lambda: subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=30, cwd=cwd)
+            )
+        
         try:
             logger.debug(f"Running LaTeX compilation for job {job_id}")
-            process = subprocess.run(
-                compile_command, 
-                capture_output=True, 
-                text=True, 
-                check=False,
-                timeout=30
-            )
+            process = await run_latex_compile(compile_command)
 
             if process.returncode != 0 or not os.path.exists(pdf_file_path):
                 logger.warning(f"LaTeX compilation failed for job {job_id} (return code: {process.returncode})")
@@ -354,24 +356,35 @@ async def generate_latex_preview_with_images(
         
         page_images_map = {p.page_number: p for p in page_images}
         
+        needed_pages = set(seg.page_number for seg in segmentations)
+        page_bytes_map: dict[int, bytes] = {}
+        
+        download_tasks = []
+        for page_num in needed_pages:
+            page_record = page_images_map.get(page_num)
+            if page_record:
+                s3_path = page_record.s3_path
+                if s3_path in _image_cache:
+                    page_bytes_map[page_num] = _image_cache[s3_path]
+                else:
+                    download_tasks.append((page_num, s3_path))
+        
+        if download_tasks:
+            results = await asyncio.gather(
+                *[download_from_s3_async(s3_path) for _, s3_path in download_tasks]
+            )
+            for (page_num, s3_path), data in zip(download_tasks, results):
+                if data:
+                    _image_cache[s3_path] = data
+                    page_bytes_map[page_num] = data
+        
         for seg in segmentations:
-            page_image_record = page_images_map.get(seg.page_number)
-            if not page_image_record:
+            page_bytes = page_bytes_map.get(seg.page_number)
+            if not page_bytes:
                 continue
-
-            page_image_s3_path = page_image_record.s3_path
-            page_image_filename = os.path.basename(page_image_s3_path)
-            temp_page_image_path = os.path.join(temp_dir, page_image_filename)
-
-            page_image_bytes = await download_from_s3_async(page_image_s3_path)
-            if not page_image_bytes:
-                continue
-                
-            with open(temp_page_image_path, 'wb') as f:
-                f.write(page_image_bytes)
 
             try:
-                with Image.open(temp_page_image_path) as img:
+                with Image.open(io.BytesIO(page_bytes)) as img:
                     img_width, img_height = img.size
                     x1 = seg.x * img_width
                     y1 = seg.y * img_height
@@ -404,11 +417,10 @@ async def generate_latex_preview_with_images(
         ]
         
         try:
-            result = subprocess.run(
-                compile_cmd,
-                cwd=temp_dir,
-                capture_output=True,
-                timeout=30
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                _subprocess_executor,
+                lambda: subprocess.run(compile_cmd, cwd=temp_dir, capture_output=True, timeout=30)
             )
             
             pdf_path = os.path.join(temp_dir, "preview.pdf")

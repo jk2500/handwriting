@@ -18,13 +18,12 @@ export function ThemeProvider({
   return (
     <NextThemesProvider
         {...props}
-        attribute="class" // Apply theme class to HTML element
-        defaultTheme="system" // Default to system preference
-        enableSystem // Enable system preference detection
-        // Disable theme switching UI by not providing storageKey or ways to change it
-        // disableTransitionOnChange // Optional: prevents style flashing on theme change, might not be needed if no manual toggle
+        attribute="class"
+        defaultTheme="light"
+        enableSystem={false}
+        forcedTheme="light"
     >
         {children}
     </NextThemesProvider>
   )
-} 
+}

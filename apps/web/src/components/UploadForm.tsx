@@ -5,8 +5,8 @@ import { useDropzone } from 'react-dropzone';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { FileUp, Upload, File, X, CheckCircle2 } from 'lucide-react'; // Import icons
-import { cn } from '@/lib/utils'; // Import cn utility for conditional class names
+import { FileUp, Upload, File, X, CheckCircle2, CloudUpload } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/utils';
 
 interface UploadFormProps {
@@ -19,10 +19,8 @@ export function UploadForm({ onUploadSuccess }: UploadFormProps) {
 
   // Dropzone callback
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    // We only handle single file uploads for now
     if (acceptedFiles.length > 0) {
       const file = acceptedFiles[0];
-      // Optional: Add file type validation here if needed
       if (file.type !== 'application/pdf') {
           toast.error('Invalid file type. Please upload a PDF.');
           setSelectedFile(null);
@@ -31,7 +29,6 @@ export function UploadForm({ onUploadSuccess }: UploadFormProps) {
           toast.info(`Selected file: ${file.name}`);
       }
     } else {
-      // Handle cases where no file is accepted (e.g., wrong type if validator is strict)
       setSelectedFile(null);
     }
   }, []);
@@ -39,8 +36,8 @@ export function UploadForm({ onUploadSuccess }: UploadFormProps) {
   // useDropzone hook setup
   const { getRootProps, getInputProps, isDragActive, isDragAccept, isDragReject } = useDropzone({
     onDrop,
-    accept: { 'application/pdf': ['.pdf'] }, // Accept only PDF files
-    multiple: false, // Only allow single file selection
+    accept: { 'application/pdf': ['.pdf'] },
+    multiple: false,
   });
 
   const handleUpload = async (event: React.FormEvent) => {
@@ -87,68 +84,79 @@ export function UploadForm({ onUploadSuccess }: UploadFormProps) {
   };
 
   return (
-    <Card className="w-full max-w-lg mx-auto mb-8 shadow-md card-hover">
+    <Card className="w-full max-w-xl mx-auto mb-8 shadow-md card-hover border-0 bg-card/80 backdrop-blur-sm">
       <CardHeader className="pb-4">
-        <div className="flex items-center gap-2">
-          <FileUp className="h-5 w-5 text-primary" />
-          <CardTitle>Upload Handwritten PDF</CardTitle>
+        <div className="flex items-center gap-2.5">
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+            <FileUp className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <CardTitle className="text-lg">Upload Handwritten PDF</CardTitle>
+            <CardDescription className="text-sm">Drag and drop or click to select your document</CardDescription>
+          </div>
         </div>
-        <CardDescription>Drag & drop a PDF file here, or click to select.</CardDescription>
       </CardHeader>
-      <CardContent className="pb-2">
+      <CardContent className="pb-4">
         {/* Dropzone Area */}
         <div
           {...getRootProps()}
           className={cn(
-            "relative border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all duration-200 ease-in-out",
+            "relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300 ease-out",
             "flex flex-col items-center justify-center gap-4",
-            isDragActive ? "border-primary/70 bg-primary/5" : "border-muted-foreground/25 hover:border-primary/40 hover:bg-muted/50",
+            "hover:border-primary/50 hover:bg-primary/5",
+            isDragActive && "border-primary/70 bg-primary/5 scale-[1.02]",
             isDragAccept && "border-green-500/70 bg-green-500/5",
-            isDragReject && "border-red-500/70 bg-red-500/5",
+            isDragReject && "border-destructive/70 bg-destructive/5",
+            !isDragActive && "border-border bg-muted/30"
           )}
         >
           <input {...getInputProps()} />
           
-          {isDragActive ? (
-            <div className="animate-bounce bg-primary/10 p-4 rounded-full">
+          <div className={cn(
+            "p-4 rounded-2xl transition-all duration-300",
+            isDragActive ? "bg-primary/15 scale-110" : "bg-primary/10"
+          )}>
+            {isDragActive ? (
+              <CloudUpload className="h-10 w-10 text-primary animate-bounce" />
+            ) : (
               <Upload className="h-10 w-10 text-primary" />
-            </div>
-          ) : (
-            <div className="bg-primary/10 p-4 rounded-full">
-              <Upload className="h-10 w-10 text-primary" />
-            </div>
-          )}
+            )}
+          </div>
           
-          <div className="space-y-1">
-            <p className="text-sm font-medium">
+          <div className="space-y-1.5">
+            <p className="text-sm font-medium text-foreground">
               {isDragActive
                 ? isDragAccept 
                   ? "Drop to upload the PDF"
                   : "This file type is not supported"
-                : "Drag & drop your PDF here"}
+                : "Drag and drop your PDF here"}
             </p>
             <p className="text-xs text-muted-foreground">
-              or click to browse files (PDF only)
+              or click to browse files (PDF only, max 50MB)
             </p>
           </div>
         </div>
         
         {/* Selected File Info */}
         {selectedFile && (
-          <div className="mt-4 p-3 border rounded-lg bg-muted/50 flex items-center justify-between animate-in fade-in-50 slide-in-from-bottom-5 duration-300">
-            <div className="flex items-center gap-2 overflow-hidden">
-              <File className="h-5 w-5 flex-shrink-0 text-primary" />
-              <span className="text-sm font-medium truncate">{selectedFile.name}</span>
-              <span className="text-xs text-muted-foreground">
-                ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-              </span>
+          <div className="mt-4 p-3.5 border rounded-xl bg-muted/50 flex items-center justify-between animate-in fade-in-50 slide-in-from-bottom-3 duration-300">
+            <div className="flex items-center gap-3 overflow-hidden">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <File className="h-5 w-5 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-sm font-medium truncate block">{selectedFile.name}</span>
+                <span className="text-xs text-muted-foreground">
+                  {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                </span>
+              </div>
             </div>
             <button
               onClick={handleClearFile}
-              className="p-1 rounded-full hover:bg-muted-foreground/10 transition-colors"
+              className="p-2 rounded-lg hover:bg-destructive/10 transition-colors group"
               aria-label="Remove file"
             >
-              <X className="h-4 w-4 text-muted-foreground" />
+              <X className="h-4 w-4 text-muted-foreground group-hover:text-destructive transition-colors" />
             </button>
           </div>
         )}
@@ -158,7 +166,7 @@ export function UploadForm({ onUploadSuccess }: UploadFormProps) {
           type="button"
           onClick={handleUpload}
           disabled={!selectedFile || isUploading}
-          className="w-full gap-2 button-hover-effect"
+          className="w-full gap-2 h-11 text-base font-medium shadow-sm"
         >
           {isUploading ? (
             <>
@@ -175,4 +183,4 @@ export function UploadForm({ onUploadSuccess }: UploadFormProps) {
       </CardFooter>
     </Card>
   );
-} 
+}

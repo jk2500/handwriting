@@ -6,12 +6,15 @@ import subprocess
 import re
 from typing import List, Dict
 from PIL import Image
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .celery_app import celery_app
 from .database import SessionLocal
 from . import models
 from .config import get_logger
 from .s3_utils import download_from_s3, upload_local_file_to_s3, S3_BUCKET_NAME, s3_client
+
+_upload_executor = ThreadPoolExecutor(max_workers=8)
 
 from packages.core_converter.src.core_converter.pdf_processing.processor import render_pdf_pages_to_images
 from packages.core_converter.src.core_converter.vlm_interaction.api_client import get_latex_from_image
@@ -76,22 +79,30 @@ def process_handwriting_conversion(self, job_id_str: str):
 
             logger.info(f"Job {job_id}: Uploading page images to S3...")
             page_image_s3_keys_map = {}
-            for image_path in rendered_image_paths:
+            
+            def upload_single_page(image_path):
+                match = re.search(r"page_(\d+)\.png", os.path.basename(image_path))
+                if not match:
+                    return None
+                page_num = int(match.group(1))
+                s3_key = f"pages/{job_id}/page_{page_num}.png"
+                s3_client.upload_file(
+                    Filename=image_path, Bucket=S3_BUCKET_NAME, Key=s3_key,
+                    ExtraArgs={'ContentType': 'image/png'}
+                )
+                return (page_num, s3_key, image_path)
+            
+            futures = {_upload_executor.submit(upload_single_page, path): path for path in rendered_image_paths}
+            for future in as_completed(futures):
                 try:
-                    match = re.search(r"page_(\d+)\.png", os.path.basename(image_path))
-                    if not match:
-                        continue
-                    page_num = int(match.group(1))
-                    s3_key = f"pages/{job_id}/page_{page_num}.png"
-                    s3_client.upload_file(
-                        Filename=image_path, Bucket=S3_BUCKET_NAME, Key=s3_key,
-                        ExtraArgs={'ContentType': 'image/png'}
-                    )
-                    uploaded_page_image_s3_keys.append(s3_key)
-                    page_image_s3_keys_map[page_num] = s3_key
-                    logger.debug(f"Uploaded {image_path} to S3 key {s3_key}")
+                    result = future.result()
+                    if result:
+                        page_num, s3_key, image_path = result
+                        uploaded_page_image_s3_keys.append(s3_key)
+                        page_image_s3_keys_map[page_num] = s3_key
+                        logger.debug(f"Uploaded {image_path} to S3 key {s3_key}")
                 except Exception as upload_err:
-                    raise Exception(f"Failed to upload page image {os.path.basename(image_path)} to S3: {upload_err}") from upload_err
+                    raise Exception(f"Failed to upload page image to S3: {upload_err}") from upload_err
             logger.info(f"Job {job_id}: Successfully uploaded {len(uploaded_page_image_s3_keys)} page images.")
 
             logger.info(f"Job {job_id}: Storing page image paths in database...")

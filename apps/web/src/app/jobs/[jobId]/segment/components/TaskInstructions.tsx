@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { PenToolIcon, TrashIcon } from 'lucide-react';
-import { SegmentationTaskItem } from '../hooks/useSegmentationData'; // Import shared type
+import { PenToolIcon, Trash2Icon, MousePointerClick } from 'lucide-react';
+import { SegmentationTaskItem } from '../hooks/useSegmentationData';
 
 interface TaskInstructionsProps {
     currentTask: SegmentationTaskItem | undefined;
@@ -10,27 +10,25 @@ interface TaskInstructionsProps {
 
 export function TaskInstructions({ currentTask }: TaskInstructionsProps) {
     return (
-        <div className="bg-primary/5 border border-primary/10 rounded-lg p-4">
+        <div className="bg-primary/5 border border-primary/10 rounded-xl p-4">
             <div className="flex items-start gap-3">
-                <div className="bg-primary/10 p-2 rounded-md flex-shrink-0">
+                <div className="bg-primary/10 p-2.5 rounded-xl flex-shrink-0">
                     <PenToolIcon size={20} className="text-primary" />
                 </div>
-                <div>
-                    <h3 className="font-medium text-foreground">
+                <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold text-foreground">
                         {currentTask?.placeholder || 'No task selected'}
                     </h3>
-                    <p className="text-sm text-primary/90 mt-1 break-words">
-                        {currentTask?.description || 'Select a task from the list to begin.'}
+                    <p className="text-sm text-muted-foreground mt-1 break-words leading-relaxed">
+                        {currentTask?.description || 'Select a task from the list to begin annotation.'}
                     </p>
-                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                        <span className="bg-card px-2 py-1 rounded border border-border inline-flex items-center gap-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m-8 6h12" />
-                            </svg>
-                            Draw Box
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <span className="bg-card px-2.5 py-1.5 rounded-lg border border-border text-xs font-medium inline-flex items-center gap-1.5 text-muted-foreground">
+                            <MousePointerClick size={12} />
+                            Click & Drag to Draw
                         </span>
-                        <span className="bg-card px-2 py-1 rounded border border-border inline-flex items-center gap-1">
-                            <TrashIcon size={12} />
+                        <span className="bg-card px-2.5 py-1.5 rounded-lg border border-border text-xs font-medium inline-flex items-center gap-1.5 text-muted-foreground">
+                            <Trash2Icon size={12} />
                             Click Box to Delete
                         </span>
                     </div>
@@ -38,4 +36,4 @@ export function TaskInstructions({ currentTask }: TaskInstructionsProps) {
             </div>
         </div>
     );
-} 
+}

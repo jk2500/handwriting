@@ -7,7 +7,7 @@ import os
 from PIL import Image
 from typing import List # Import List
 
-DEFAULT_DPI = 300
+DEFAULT_DPI = 150
 
 def render_pdf_pages_to_images(pdf_path: str, output_dir: str, dpi: int = DEFAULT_DPI) -> List[str]:
     """

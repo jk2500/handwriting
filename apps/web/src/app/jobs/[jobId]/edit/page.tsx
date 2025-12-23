@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import CodeMirror from '@uiw/react-codemirror';
 import { latex } from 'codemirror-lang-latex';
-import { oneDark } from '@codemirror/theme-one-dark';
+import { EditorView } from '@codemirror/view';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '@/lib/utils';
@@ -36,6 +36,44 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+// Custom light theme for CodeMirror
+const lightTheme = EditorView.theme({
+  "&": {
+    backgroundColor: "oklch(0.995 0.005 85)",
+    color: "oklch(0.22 0.02 30)",
+  },
+  ".cm-content": {
+    caretColor: "oklch(0.40 0.12 195)",
+    fontFamily: "var(--font-geist-mono), monospace",
+  },
+  ".cm-cursor": {
+    borderLeftColor: "oklch(0.40 0.12 195)",
+    borderLeftWidth: "2px",
+  },
+  "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": {
+    backgroundColor: "oklch(0.85 0.08 195 / 0.3)",
+  },
+  ".cm-activeLine": {
+    backgroundColor: "oklch(0.96 0.008 85)",
+  },
+  ".cm-gutters": {
+    backgroundColor: "oklch(0.975 0.008 85)",
+    color: "oklch(0.55 0.015 30)",
+    border: "none",
+    borderRight: "1px solid oklch(0.90 0.01 85)",
+  },
+  ".cm-activeLineGutter": {
+    backgroundColor: "oklch(0.94 0.01 85)",
+  },
+  ".cm-lineNumbers .cm-gutterElement": {
+    padding: "0 12px 0 8px",
+  },
+  ".cm-matchingBracket": {
+    backgroundColor: "oklch(0.80 0.10 195 / 0.3)",
+    outline: "1px solid oklch(0.50 0.12 195)",
+  },
+}, { dark: false });
 
 export default function EditJobPage() {
   const params = useParams();
@@ -245,11 +283,11 @@ export default function EditJobPage() {
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <Link href="/jobs" className="text-primary hover:text-primary/80 flex items-center gap-1 mb-4">
+        <Link href="/jobs" className="text-primary hover:text-primary/80 flex items-center gap-1 mb-4 transition-colors">
            <ArrowLeftIcon size={16} />
            <span>Back to Jobs</span>
         </Link>
-        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg p-4 my-6">
+        <div className="bg-destructive/5 border border-destructive/20 text-destructive rounded-xl p-4 my-6">
            Error loading editor: {error}
         </div>
       </div>
@@ -260,17 +298,17 @@ export default function EditJobPage() {
     <div className="container mx-auto px-4 py-4 max-w-7xl page-animation">
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-4">
-          <Link href="/jobs" className="text-primary hover:text-primary/80 flex items-center gap-1">
+          <Link href="/jobs" className="text-primary hover:text-primary/80 flex items-center gap-1 transition-colors">
               <ArrowLeftIcon size={16} />
               <span>Back to Jobs</span>
           </Link>
-          <Badge variant="outline" className="flex items-center gap-1">
+          <Badge variant="outline" className="flex items-center gap-1.5 font-medium">
             <FileIcon className="h-3 w-3" />
             <span>Job: {jobId.substring(0, 8)}...</span>
           </Badge>
           {lastSaved && (
             <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <CheckCircleIcon className="h-3 w-3" />
+              <CheckCircleIcon className="h-3 w-3 text-green-600" />
               Last saved: {lastSaved.toLocaleTimeString()}
             </span>
           )}
@@ -283,7 +321,7 @@ export default function EditJobPage() {
                   onClick={handleDownload}
                   size="sm"
                   variant="outline"
-                  className="gap-1"
+                  className="gap-1.5"
                 >
                   <DownloadIcon className="h-4 w-4" />
                   <span className="hidden sm:inline">Download</span>
@@ -298,7 +336,7 @@ export default function EditJobPage() {
                   onClick={saveTexContent}
                   size="sm"
                   variant="default"
-                  className="gap-1"
+                  className="gap-1.5"
                   disabled={isSaving}
                 >
                   {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <SaveIcon className="h-4 w-4" />}
@@ -312,9 +350,9 @@ export default function EditJobPage() {
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-wrap gap-2 mb-4 p-2 bg-muted/20 rounded-md border">
+      <div className="flex flex-wrap gap-2 mb-4 p-3 bg-card rounded-xl border shadow-sm">
         <Select onValueChange={(value) => insertTemplate(value)}>
-          <SelectTrigger className="h-8 w-[180px]">
+          <SelectTrigger className="h-8 w-[180px] bg-background">
             <SelectValue placeholder="Insert template..." />
           </SelectTrigger>
           <SelectContent>
@@ -362,7 +400,7 @@ export default function EditJobPage() {
             </Tooltip>
           </TooltipProvider>
           
-          <span className="flex items-center justify-center text-xs font-medium w-12">{zoomLevel}%</span>
+          <span className="flex items-center justify-center text-xs font-medium w-12 text-muted-foreground">{zoomLevel}%</span>
           
           <TooltipProvider>
             <Tooltip>
@@ -385,37 +423,37 @@ export default function EditJobPage() {
 
       <div className={`grid ${isFullscreenPreview ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'} gap-4 h-[75vh]`}>
         {!isFullscreenPreview && (
-          <div className="border rounded-md overflow-hidden flex flex-col h-full shadow-sm">
-            <div className="p-2 bg-muted/50 border-b text-sm font-medium">TeX Source</div>
+          <div className="border rounded-xl overflow-hidden flex flex-col h-full shadow-sm bg-card">
+            <div className="px-4 py-2.5 bg-muted/30 border-b text-sm font-semibold text-foreground">TeX Source</div>
             <div className="flex-grow overflow-auto">
               <CodeMirror
                 value={texContent}
                 height="100%"
-                theme={oneDark}
+                theme={lightTheme}
                 extensions={[latex()]}
                 onChange={onEditorChange}
-                style={{ height: '100%', fontSize: '0.9rem' }}
+                style={{ height: '100%', fontSize: '0.875rem' }}
               />
             </div>
           </div>
         )}
 
-        <div className="border rounded-md overflow-hidden flex flex-col h-full shadow-sm">
-          <div className="p-2 bg-muted/50 border-b text-sm font-medium flex justify-between items-center">
+        <div className="border rounded-xl overflow-hidden flex flex-col h-full shadow-sm bg-card">
+          <div className="px-4 py-2.5 bg-muted/30 border-b text-sm font-semibold flex justify-between items-center">
             <span>PDF Preview</span>
             {isPreviewLoading && (
-              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Loader2 className="h-3 w-3 animate-spin" /> 
                 Compiling...
               </span>
             )}
           </div>
-          <div className="flex-grow relative bg-muted/20">
+          <div className="flex-grow relative bg-muted/10">
             {previewError && (
-              <div className="absolute inset-0 flex items-center justify-center p-4 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400">
-                <div className="text-center">
-                  <p className="font-semibold mb-2">Preview Compilation Error</p>
-                  <pre className="mt-1 text-xs whitespace-pre-wrap text-left max-h-60 overflow-auto bg-red-100 dark:bg-red-900 p-2 rounded">
+              <div className="absolute inset-0 flex items-center justify-center p-4 bg-destructive/5">
+                <div className="text-center max-w-md">
+                  <p className="font-semibold mb-2 text-destructive">Preview Compilation Error</p>
+                  <pre className="mt-1 text-xs whitespace-pre-wrap text-left max-h-60 overflow-auto bg-destructive/10 text-destructive p-3 rounded-lg">
                     {previewError}
                   </pre>
                 </div>

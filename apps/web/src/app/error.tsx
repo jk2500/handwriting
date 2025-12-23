@@ -17,17 +17,19 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] p-8">
-      <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg p-8 max-w-md w-full text-center">
-        <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-        <h2 className="text-xl font-semibold text-red-700 dark:text-red-400 mb-2">
+    <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 page-animation">
+      <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-8 max-w-md w-full text-center shadow-sm">
+        <div className="mx-auto mb-4 h-14 w-14 rounded-full bg-destructive/10 flex items-center justify-center">
+          <AlertTriangle className="h-7 w-7 text-destructive" />
+        </div>
+        <h2 className="text-xl font-semibold text-foreground mb-2">
           Something went wrong
         </h2>
-        <p className="text-red-600 dark:text-red-300 mb-4 text-sm">
+        <p className="text-muted-foreground mb-4 text-sm">
           {error.message || 'An unexpected error occurred'}
         </p>
         {error.digest && (
-          <p className="text-xs text-muted-foreground mb-4">
+          <p className="text-xs text-muted-foreground/70 mb-4 font-mono">
             Error ID: {error.digest}
           </p>
         )}
@@ -41,7 +43,7 @@ export default function Error({
             Try Again
           </Button>
           <Link href="/">
-            <Button variant="default" className="gap-2">
+            <Button variant="default" className="gap-2 shadow-sm">
               <Home className="h-4 w-4" />
               Go Home
             </Button>

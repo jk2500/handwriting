@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FileText, Scissors, PlayCircle, ChevronRight, AlertCircle } from "lucide-react";
+import { FileText, Scissors, PlayCircle, ChevronRight, AlertCircle, Sparkles } from "lucide-react";
 import { toast } from 'sonner';
 import { 
   API_BASE_URL, 
@@ -37,14 +37,13 @@ export default function Home() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data: Job[] = await response.json();
-      // Sort by creation date (newest first)
       data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setJobs(data);
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : String(e);
       setError(`Failed to fetch jobs: ${errorMessage}`);
       console.error("Fetch error:", e);
-      setJobs([]); // Clear jobs on error
+      setJobs([]);
     } finally {
       setLoading(false);
     }
@@ -57,7 +56,6 @@ export default function Home() {
 
   useVisibilityPolling(fetchJobs, 10000);
 
-  // Get only the 4 most recent jobs for the home page
   const recentJobs = jobs.slice(0, 4);
 
   const handleCompile = async (jobId: string) => {
@@ -73,7 +71,6 @@ export default function Home() {
       
       toast.success('Compilation triggered', { id: toastId });
       console.log(`Compilation triggered for job ${jobId}`);
-      // Refresh job list shortly after to hopefully catch status update
       setTimeout(fetchJobs, 1000);
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : String(e);
@@ -82,34 +79,42 @@ export default function Home() {
     }
   };
 
-  // Use the status icon from utility
   const StatusIcon = ({ status }: { status: string }) => getStatusIcon(status);
 
   return (
-    <div className="container mx-auto px-4 py-8 page-animation">
-      <div className="mb-10 text-center">
-        <h1 className="text-4xl font-bold mb-4 text-center bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+    <div className="container mx-auto px-4 py-10 page-animation">
+      {/* Hero Section */}
+      <div className="mb-12 text-center max-w-2xl mx-auto">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
+          <Sparkles className="h-4 w-4" />
+          <span>Powered by Vision Language Models</span>
+        </div>
+        <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight gradient-text">
           Handwriting Conversion
         </h1>
-        <p className="text-lg text-muted-foreground max-w-lg mx-auto">
-          Convert your handwritten PDFs to LaTeX with ease. Upload your PDF, segment diagrams, and compile.
+        <p className="text-lg text-muted-foreground leading-relaxed">
+          Convert your handwritten PDFs to LaTeX with ease. Upload your document, segment diagrams, and compile to beautiful typeset output.
         </p>
       </div>
 
-      <div className="max-w-4xl mx-auto mb-8">
+      {/* Upload Form */}
+      <div className="max-w-4xl mx-auto mb-12">
         <UploadForm onUploadSuccess={fetchJobs} />
       </div>
 
+      {/* Recent Jobs Section */}
       <div className="mb-6 flex items-center justify-between max-w-4xl mx-auto">
-        <h2 className="text-2xl font-semibold flex items-center gap-2">
-          <FileText className="h-5 w-5 text-primary" />
+        <h2 className="text-xl font-semibold flex items-center gap-2.5 text-foreground">
+          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+            <FileText className="h-4 w-4 text-primary" />
+          </div>
           Recent Jobs
         </h2>
         <Link href="/jobs">
           <Button 
             variant="ghost" 
             size="sm" 
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
           >
             View All Jobs
             <ChevronRight className="h-4 w-4" />
@@ -118,50 +123,56 @@ export default function Home() {
       </div>
 
       {loading && jobs.length === 0 && (
-        <div className="flex justify-center items-center p-12 max-w-4xl mx-auto">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        <div className="flex justify-center items-center p-16 max-w-4xl mx-auto">
+          <div className="flex flex-col items-center gap-4">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary/30 border-t-primary"></div>
+            <p className="text-sm text-muted-foreground">Loading jobs...</p>
+          </div>
         </div>
       )}
       
       {error && (
-        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 rounded-lg p-4 my-4 flex items-start gap-3 max-w-4xl mx-auto">
+        <div className="bg-destructive/5 border border-destructive/20 text-destructive rounded-xl p-4 my-4 flex items-start gap-3 max-w-4xl mx-auto">
           <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
           <div>
             <h3 className="font-medium">Error loading jobs</h3>
-            <p className="text-sm">{error}</p>
+            <p className="text-sm opacity-90">{error}</p>
           </div>
         </div>
       )}
 
       {!error && (
-        <div className="rounded-xl border bg-card shadow-sm overflow-hidden card-hover max-w-4xl mx-auto">
+        <div className="rounded-xl border bg-card shadow-sm overflow-hidden max-w-4xl mx-auto">
           <Table>
             {recentJobs.length === 0 && !loading ? (
-              <TableCaption>No jobs found. Upload a PDF to get started.</TableCaption>
+              <TableCaption className="py-8">No jobs found. Upload a PDF to get started.</TableCaption>
             ) : (
-              <TableCaption>Your most recent conversion jobs. <Link href="/jobs" className="text-primary hover:underline">View all</Link></TableCaption>
+              <TableCaption className="py-4">
+                Your most recent conversion jobs.{' '}
+                <Link href="/jobs" className="text-primary hover:underline font-medium">
+                  View all
+                </Link>
+              </TableCaption>
             )}
             <TableHeader>
-              <TableRow>
-                <TableHead className="w-[250px]">Filename</TableHead>
-                <TableHead className="w-[140px]">Status</TableHead>
-                <TableHead className="w-[120px]">Created</TableHead>
-                <TableHead className="w-[100px]">Model</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+              <TableRow className="hover:bg-transparent border-b bg-muted/30">
+                <TableHead className="w-[250px] font-semibold">Filename</TableHead>
+                <TableHead className="w-[140px] font-semibold">Status</TableHead>
+                <TableHead className="w-[120px] font-semibold">Created</TableHead>
+                <TableHead className="w-[100px] font-semibold">Model</TableHead>
+                <TableHead className="text-right font-semibold">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {recentJobs.length === 0 && !loading ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                     No jobs found.
                   </TableCell>
                 </TableRow>
               ) : (
                 recentJobs.map((job) => {
                   const { 
-                    // canDownloadInitialTex, // Commented out unused variable
-                    // canDownloadFinalTex, // Commented out unused variable
                     canDownloadPdf,
                     canSegment,
                     canCompile,
@@ -169,7 +180,7 @@ export default function Home() {
                   } = getButtonVisibility(job);
                   
                   return (
-                    <TableRow key={job.id} className="hover:bg-muted/40 transition-colors">
+                    <TableRow key={job.id} className="table-row-hover">
                       <TableCell className="font-medium truncate max-w-[250px]" title={job.input_pdf_filename || 'N/A'}>
                         {job.input_pdf_filename || 'N/A'}
                       </TableCell>
@@ -181,10 +192,9 @@ export default function Home() {
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell>{formatDate(job.created_at)}</TableCell>
+                      <TableCell className="text-muted-foreground">{formatDate(job.created_at)}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{job.model_used || 'N/A'}</TableCell>
                       <TableCell className="text-right space-x-2">
-                        {/* View TeX Button */}
                         {canViewTex && (
                           <Link href={`/jobs/${job.id}/edit`} passHref legacyBehavior>
                             <Button
@@ -192,7 +202,7 @@ export default function Home() {
                               variant="outline"
                               size="sm"
                               title="View and edit TeX file"
-                              className="gap-1 button-hover-effect"
+                              className="gap-1.5"
                             >
                               <a>
                                 <FileText className="h-3.5 w-3.5" />
@@ -202,7 +212,6 @@ export default function Home() {
                           </Link>
                         )}
                         
-                        {/* Segmentation Button - only show when awaiting segmentation */}
                         {canSegment && (
                           <Link href={`/jobs/${job.id}/segment`} passHref legacyBehavior>
                             <Button
@@ -210,7 +219,7 @@ export default function Home() {
                               variant="default"
                               size="sm"
                               title="Segment this job"
-                              className="gap-1 button-hover-effect"
+                              className="gap-1.5 shadow-sm"
                             >
                               <a>
                                 <Scissors className="h-3.5 w-3.5" />
@@ -220,28 +229,26 @@ export default function Home() {
                           </Link>
                         )}
                         
-                        {/* Compile Button - only show after segmentation is complete */}
                         {canCompile && (
                           <Button
                             variant="secondary"
                             size="sm"
                             onClick={() => handleCompile(job.id)}
                             title="Compile segmented document"
-                            className="gap-1 button-hover-effect"
+                            className="gap-1.5"
                           >
                             <PlayCircle className="h-3.5 w-3.5" />
                             <span>Compile</span>
                           </Button>
                         )}
                         
-                        {/* PDF Button - only show after compilation */}
                         {canDownloadPdf && (
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => window.open(`${API_BASE_URL}/jobs/${job.id}/pdf`, '_blank')}
                             title="Download PDF file"
-                            className="gap-1 button-hover-effect"
+                            className="gap-1.5"
                           >
                             <FileText className="h-3.5 w-3.5" />
                             <span>PDF</span>

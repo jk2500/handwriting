@@ -1,12 +1,24 @@
 'use client';
 
-import { useState, useEffect, RefObject } from 'react';
-import { PageImageInfo } from './useSegmentationData'; // Import shared type
+import { useState, useEffect, useRef, RefObject } from 'react';
+import { PageImageInfo } from './useSegmentationData';
 
 interface UseImageLoaderProps {
     pageImages: PageImageInfo[];
     currentPageIndex: number;
     containerRef: RefObject<HTMLDivElement | null>;
+}
+
+const imageCache = new Map<string, HTMLImageElement>();
+
+function preloadImage(url: string): void {
+    if (!url || imageCache.has(url)) return;
+    const img = new window.Image();
+    img.src = url;
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+        imageCache.set(url, img);
+    };
 }
 
 export function useImageLoader({ 
@@ -17,10 +29,9 @@ export function useImageLoader({
     
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
     const [imageObj, setImageObj] = useState<HTMLImageElement | null>(null);
-    // Store the actual rendered image dimensions within the container
     const [renderedImageSize, setRenderedImageSize] = useState({ width: 0, height: 0 });
-    // Store scale factor: natural size / rendered size
-    const [imageScale, setImageScale] = useState({ x: 1, y: 1 }); 
+    const [imageScale, setImageScale] = useState({ x: 1, y: 1 });
+    const prefetchedRef = useRef<Set<number>>(new Set()); 
 
     // Calculate container size and rendered image size
     const calculateSizes = (container: HTMLDivElement | null, img: HTMLImageElement | null) => {
@@ -61,31 +72,52 @@ export function useImageLoader({
         });
     };
 
-    // Load the current page image
     useEffect(() => {
-        setImageObj(null); // Clear previous image
+        setImageObj(null);
         if (pageImages.length === 0 || currentPageIndex >= pageImages.length) return;
         
         const currentImageInfo = pageImages[currentPageIndex];
         if (!currentImageInfo?.image_url) return;
 
+        const cachedImg = imageCache.get(currentImageInfo.image_url);
+        if (cachedImg) {
+            setImageObj(cachedImg);
+            calculateSizes(containerRef.current, cachedImg);
+            return;
+        }
+
         const img = new window.Image();
         img.src = currentImageInfo.image_url;
-        img.crossOrigin = 'anonymous'; // Still potentially useful if drawing to canvas later
+        img.crossOrigin = 'anonymous';
         
         img.onload = () => {
-            setImageObj(img); 
-            // Calculate sizes *after* image is loaded and state is set
+            imageCache.set(currentImageInfo.image_url, img);
+            setImageObj(img);
             calculateSizes(containerRef.current, img);
         };
 
         img.onerror = (error) => {
             console.error("Error loading image:", currentImageInfo.image_url, error);
             setImageObj(null);
-            calculateSizes(containerRef.current, null); // Reset sizes on error
+            calculateSizes(containerRef.current, null);
         };
 
-    }, [pageImages, currentPageIndex, containerRef]); // Rerun when image or container changes
+    }, [pageImages, currentPageIndex, containerRef]);
+
+    useEffect(() => {
+        if (pageImages.length === 0) return;
+        
+        const pagesToPrefetch = [currentPageIndex - 1, currentPageIndex + 1, currentPageIndex + 2];
+        pagesToPrefetch.forEach(idx => {
+            if (idx >= 0 && idx < pageImages.length && !prefetchedRef.current.has(idx)) {
+                const url = pageImages[idx]?.image_url;
+                if (url) {
+                    preloadImage(url);
+                    prefetchedRef.current.add(idx);
+                }
+            }
+        });
+    }, [pageImages, currentPageIndex]);
 
     // Adjust sizes on window resize
     useEffect(() => {
