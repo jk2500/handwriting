@@ -29,3 +29,5 @@ out/
 
 # Ignore web app specific env files
 /apps/web/.env.local 
+
+*.png
