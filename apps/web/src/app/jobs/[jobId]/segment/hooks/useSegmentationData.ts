@@ -22,11 +22,13 @@ export interface BoundingBox {
     height: number; // Relative height (0-1)
     label: string;
     pageNumber: number;
+    enhancedS3Path?: string;
+    useEnhanced?: boolean;
 }
 
 // API response structure for segmentations (adjust if needed)
 interface ApiSegmentation {
-    id?: number; // Optional ID if your API returns it
+    id?: number;
     page_number: number;
     x: number;
     y: number;
@@ -34,6 +36,8 @@ interface ApiSegmentation {
     height: number;
     label: string;
     pageNumber: number;
+    enhanced_s3_path?: string;
+    use_enhanced?: boolean;
 }
 
 interface UseSegmentationDataProps {
@@ -94,7 +98,9 @@ export function useSegmentationData({ jobId }: UseSegmentationDataProps) {
                         width: seg.width,
                         height: seg.height,
                         label: seg.label,
-                        pageNumber: seg.pageNumber
+                        pageNumber: seg.pageNumber,
+                        enhancedS3Path: seg.enhanced_s3_path,
+                        useEnhanced: seg.use_enhanced,
                     }));
                     
                     // *** LOG MAPPED BOXES ***
@@ -163,6 +169,15 @@ export function useSegmentationData({ jobId }: UseSegmentationDataProps) {
          setCompletedTasks(completed);
     }, []);
 
+    // Function to update a bounding box by label
+    const updateBoundingBox = useCallback((label: string, updates: Partial<BoundingBox>) => {
+        setBoundingBoxes(prevBoxes => 
+            prevBoxes.map(box => 
+                box.label === label ? { ...box, ...updates } : box
+            )
+        );
+    }, []);
+
     return {
         pageImages,
         segmentationTasks,
@@ -173,6 +188,7 @@ export function useSegmentationData({ jobId }: UseSegmentationDataProps) {
         addBoundingBox,
         removeBoundingBoxByIndex,
         overwriteBoundingBoxes,
+        updateBoundingBox,
         refetchData: fetchData // Expose refetch function
     };
 } 

@@ -44,9 +44,9 @@ export default function SegmentationPage() {
         label: string;
         originalUrl: string;
         enhancedUrl: string;
-        segmentationId: number;
+        enhancedS3Path: string;
+        segmentationId: number | null;
     } | null>(null);
-    const [enhancedLabels, setEnhancedLabels] = useState<Set<string>>(new Set());
 
     // --- Custom Hooks --- 
     const {
@@ -58,6 +58,7 @@ export default function SegmentationPage() {
         error: dataError,
         addBoundingBox,
         removeBoundingBoxByIndex,
+        updateBoundingBox,
     } = useSegmentationData({ jobId });
 
     const {
@@ -78,6 +79,16 @@ export default function SegmentationPage() {
 
     const currentTask = useMemo(() => segmentationTasks?.[currentTaskIndex], [segmentationTasks, currentTaskIndex]);
     const currentPage = useMemo(() => pageImages?.[currentPageIndex], [pageImages, currentPageIndex]);
+    
+    const enhancedLabels = useMemo(() => {
+        const labels = new Set<string>();
+        boundingBoxes.forEach(box => {
+            if (box.useEnhanced && box.enhancedS3Path) {
+                labels.add(box.label);
+            }
+        });
+        return labels;
+    }, [boundingBoxes]);
     
     const handleGoToNextTask = useCallback(() => {
         if (currentTask && !completedTasks.has(currentTask.placeholder) && currentTaskIndex < segmentationTasks.length - 1) {
@@ -164,7 +175,9 @@ export default function SegmentationPage() {
                     y: box.y,
                     width: box.width,
                     height: box.height,
-                    label: box.label
+                    label: box.label,
+                    enhanced_s3_path: box.enhancedS3Path || null,
+                    use_enhanced: box.useEnhanced || false,
                 }));
                 console.log("Submitting segmentations:", apiSegmentations); 
                 const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/segmentations`, {
@@ -231,7 +244,13 @@ export default function SegmentationPage() {
             }
 
             const result = await response.json();
-            setEnhanceResult(result);
+            setEnhanceResult({
+                label: result.label,
+                originalUrl: result.original_url,
+                enhancedUrl: result.enhanced_url,
+                enhancedS3Path: result.enhanced_s3_path,
+                segmentationId: result.segmentation_id,
+            });
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             toast.error(`Enhancement failed: ${errorMessage}`);
@@ -244,16 +263,18 @@ export default function SegmentationPage() {
         if (!enhanceResult) return;
         
         try {
-            await fetch(`${API_BASE_URL}/jobs/${jobId}/segmentations/${enhanceResult.segmentationId}/use-enhanced`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ use_enhanced: false }),
-            });
+            if (enhanceResult.segmentationId) {
+                const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/segmentations/${enhanceResult.segmentationId}/use-enhanced`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ use_enhanced: false }),
+                });
+                if (!response.ok) throw new Error('API error');
+            }
             
-            setEnhancedLabels(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(enhanceResult.label);
-                return newSet;
+            updateBoundingBox(enhanceResult.label, {
+                enhancedS3Path: enhanceResult.enhancedS3Path,
+                useEnhanced: false,
             });
             toast.success('Using original image');
         } catch (error) {
@@ -268,13 +289,19 @@ export default function SegmentationPage() {
         if (!enhanceResult) return;
         
         try {
-            await fetch(`${API_BASE_URL}/jobs/${jobId}/segmentations/${enhanceResult.segmentationId}/use-enhanced`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ use_enhanced: true }),
-            });
+            if (enhanceResult.segmentationId) {
+                const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/segmentations/${enhanceResult.segmentationId}/use-enhanced`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ use_enhanced: true }),
+                });
+                if (!response.ok) throw new Error('API error');
+            }
             
-            setEnhancedLabels(prev => new Set(prev).add(enhanceResult.label));
+            updateBoundingBox(enhanceResult.label, {
+                enhancedS3Path: enhanceResult.enhancedS3Path,
+                useEnhanced: true,
+            });
             toast.success('Using AI enhanced image');
         } catch (error) {
             toast.error('Failed to update preference');

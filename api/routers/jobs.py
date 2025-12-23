@@ -645,6 +645,7 @@ async def enhance_segmentation(
     original_url = get_s3_presigned_url(original_s3_key)
     
     enhanced_url = ""
+    enhanced_s3_key = ""
     enhancement_error = None
     try:
         enhanced_bytes = await enhance_image(cropped_bytes, description)
@@ -663,9 +664,11 @@ async def enhance_segmentation(
                 db.commit()
         else:
             enhancement_error = "Failed to upload enhanced image"
+            enhanced_s3_key = ""
     except Exception as e:
         logger.exception(f"Error enhancing image: {e}")
         enhancement_error = str(e)
+        enhanced_s3_key = ""
     
     if enhancement_error:
         logger.warning(f"Enhancement failed for {request.label}: {enhancement_error}")
@@ -674,6 +677,7 @@ async def enhance_segmentation(
         label=request.label,
         original_url=original_url or "",
         enhanced_url=enhanced_url,
+        enhanced_s3_path=enhanced_s3_key,
         segmentation_id=segmentation.id if segmentation else None
     )
 

@@ -83,7 +83,8 @@ class SegmentationBase(BaseModel):
         return v
 
 class SegmentationCreate(SegmentationBase):
-    pass
+    enhanced_s3_path: Optional[str] = None
+    use_enhanced: bool = False
 
 class Segmentation(SegmentationBase):
     id: int
@@ -112,6 +113,7 @@ class EnhanceResponse(BaseModel):
     label: str
     original_url: str
     enhanced_url: str
+    enhanced_s3_path: str
     segmentation_id: Optional[int] = None
 
 
