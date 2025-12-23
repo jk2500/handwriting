@@ -13,7 +13,11 @@ import {
     PenToolIcon,
     AlertCircle,
     Loader2,
-    Layers
+    Layers,
+    HelpCircle,
+    MousePointer2,
+    Sparkles,
+    Save
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -363,6 +367,36 @@ export default function SegmentationPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Instructions */}
+            <Card className="mb-6 shadow-sm border-0 bg-primary/5 border-primary/20">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                        <HelpCircle className="h-4 w-4 text-primary" />
+                        How to Segment
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm text-muted-foreground">
+                    <div className="grid gap-3 md:grid-cols-4">
+                        <div className="flex items-start gap-2">
+                            <MousePointer2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                            <div><strong className="text-foreground">Draw Box</strong> - Click and drag on the image to draw a bounding box around a diagram or figure.</div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                            <Sparkles className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                            <div><strong className="text-foreground">Enhance with AI</strong> - Use AI to redraw hand-drawn diagrams as clean, professional figures.</div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                            <PenToolIcon className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                            <div><strong className="text-foreground">Complete Tasks</strong> - Draw boxes for each item in the task list on the left.</div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                            <Save className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                            <div><strong className="text-foreground">Save & Continue</strong> - Click Save when done to proceed to compilation.</div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
 
             {/* Main Content Grid */} 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">

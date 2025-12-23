@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FileText, Scissors, PlayCircle, ArrowUpDown, RotateCcw, AlertCircle, Search, Filter } from "lucide-react";
+import { FileText, Scissors, PlayCircle, ArrowUpDown, RotateCcw, AlertCircle, Search, Filter, HelpCircle } from "lucide-react";
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -145,6 +145,32 @@ export default function JobsPage() {
         <h1 className="text-3xl font-bold mb-2 tracking-tight gradient-text">All Conversion Jobs</h1>
         <p className="text-muted-foreground">View and manage all your LaTeX conversion jobs.</p>
       </div>
+
+      {/* Instructions */}
+      <Card className="mb-6 shadow-sm border-0 bg-primary/5 border-primary/20">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <HelpCircle className="h-4 w-4 text-primary" />
+            How It Works
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground space-y-2">
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="flex items-start gap-2">
+              <FileText className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+              <div><strong className="text-foreground">View TeX</strong> - Review and edit the generated LaTeX code before segmentation.</div>
+            </div>
+            <div className="flex items-start gap-2">
+              <Scissors className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+              <div><strong className="text-foreground">Segment</strong> - Draw bounding boxes around diagrams/figures to extract them.</div>
+            </div>
+            <div className="flex items-start gap-2">
+              <PlayCircle className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+              <div><strong className="text-foreground">Compile</strong> - Generate the final PDF with extracted figures embedded.</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Filters & Controls */}
       <Card className="mb-6 shadow-sm border-0 bg-card/80 backdrop-blur-sm">
