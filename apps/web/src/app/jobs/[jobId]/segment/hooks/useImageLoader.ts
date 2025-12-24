@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, RefObject } from 'react';
 import { PageImageInfo } from './useSegmentationData';
+import { getPreloadedImage } from '@/lib/utils';
 
 interface UseImageLoaderProps {
     pageImages: PageImageInfo[];
@@ -13,6 +14,14 @@ const imageCache = new Map<string, HTMLImageElement>();
 
 function preloadImage(url: string): void {
     if (!url || imageCache.has(url)) return;
+    
+    // Check if already preloaded by the global cache
+    const globalCached = getPreloadedImage(url);
+    if (globalCached) {
+        imageCache.set(url, globalCached);
+        return;
+    }
+    
     const img = new window.Image();
     img.src = url;
     img.crossOrigin = 'anonymous';
@@ -79,10 +88,20 @@ export function useImageLoader({
         const currentImageInfo = pageImages[currentPageIndex];
         if (!currentImageInfo?.image_url) return;
 
+        // Check local cache first
         const cachedImg = imageCache.get(currentImageInfo.image_url);
         if (cachedImg) {
             setImageObj(cachedImg);
             calculateSizes(containerRef.current, cachedImg);
+            return;
+        }
+        
+        // Check global preload cache
+        const globalCached = getPreloadedImage(currentImageInfo.image_url);
+        if (globalCached) {
+            imageCache.set(currentImageInfo.image_url, globalCached);
+            setImageObj(globalCached);
+            calculateSizes(containerRef.current, globalCached);
             return;
         }
 

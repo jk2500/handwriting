@@ -7,24 +7,24 @@ import os
 from PIL import Image
 from typing import List # Import List
 
-DEFAULT_DPI = 150
+DEFAULT_DPI = 120
+JPEG_QUALITY = 85
 
 def render_pdf_pages_to_images(pdf_path: str, output_dir: str, dpi: int = DEFAULT_DPI) -> List[str]:
     """
-    Renders *all* pages of a PDF to individual image files (PNG format, grayscale).
+    Renders *all* pages of a PDF to individual image files (JPEG format for smaller size).
 
     Args:
         pdf_path: Path to the input PDF file.
-        output_dir: Directory where the output PNG images will be saved.
+        output_dir: Directory where the output JPEG images will be saved.
         dpi: Resolution (dots per inch) for rendering the images.
 
     Returns:
         A list of paths to the generated image files if successful, an empty list otherwise.
     """
     generated_image_paths = []
-    doc = None # Initialize doc to None
+    doc = None
     try:
-        # Ensure output directory exists
         os.makedirs(output_dir, exist_ok=True)
 
         doc = fitz.open(pdf_path)
@@ -36,13 +36,13 @@ def render_pdf_pages_to_images(pdf_path: str, output_dir: str, dpi: int = DEFAUL
         print(f"Rendering {doc.page_count} pages from '{pdf_path}' to '{output_dir}'...")
 
         for i, page in enumerate(doc.pages()):
-            output_image_path = os.path.join(output_dir, f"page_{i}.png")
+            output_image_path = os.path.join(output_dir, f"page_{i}.jpg")
             
             pix = page.get_pixmap(dpi=dpi)
             
             img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
             
-            img.save(output_image_path, "PNG", optimize=True)
+            img.save(output_image_path, "JPEG", quality=JPEG_QUALITY, optimize=True)
             generated_image_paths.append(output_image_path)
             print(f"  - Saved {output_image_path}")
         

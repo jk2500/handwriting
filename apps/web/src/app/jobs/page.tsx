@@ -26,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { API_BASE_URL, type Job, formatDate, getButtonVisibility } from '@/lib/utils';
+import { API_BASE_URL, type Job, formatDate, getButtonVisibility, preloadJobImages, shouldPreloadImages } from '@/lib/utils';
 import { getStatusDisplayName, getStatusClass, getStatusIcon } from '@/lib/statusUtils';
 
 export default function JobsPage() {
@@ -55,6 +55,13 @@ export default function JobsPage() {
       });
       setAllJobs(data);
       applyFilters(data, searchTerm, statusFilter);
+      
+      // Preload images for jobs that are processing or ready for segmentation
+      data.forEach(job => {
+        if (shouldPreloadImages(job.status)) {
+          preloadJobImages(job.id);
+        }
+      });
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : String(e);
       setError(`Failed to fetch jobs: ${errorMessage}`);

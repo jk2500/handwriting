@@ -152,3 +152,39 @@ export const getStatusIcon = (status: string) => {
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
+
+// Image preload cache - persists across components
+const preloadedJobs = new Set<string>();
+const imageCache = new Map<string, HTMLImageElement>();
+
+export const preloadJobImages = async (jobId: string): Promise<void> => {
+  if (preloadedJobs.has(jobId)) return;
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/pages`);
+    if (!response.ok) return;
+    
+    const data = await response.json();
+    const pages = data.pages || [];
+    
+    pages.forEach((page: { image_url: string }) => {
+      if (page.image_url && !imageCache.has(page.image_url)) {
+        const img = new Image();
+        img.src = page.image_url;
+        img.onload = () => imageCache.set(page.image_url, img);
+      }
+    });
+    
+    preloadedJobs.add(jobId);
+  } catch {
+    // Silently fail - preloading is best-effort
+  }
+};
+
+export const getPreloadedImage = (url: string): HTMLImageElement | undefined => {
+  return imageCache.get(url);
+};
+
+export const shouldPreloadImages = (status: string): boolean => {
+  return status === 'processing_vlm' || status === 'awaiting_segmentation';
+};

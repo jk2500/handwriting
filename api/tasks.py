@@ -81,14 +81,16 @@ def process_handwriting_conversion(self, job_id_str: str):
             page_image_s3_keys_map = {}
             
             def upload_single_page(image_path):
-                match = re.search(r"page_(\d+)\.png", os.path.basename(image_path))
+                match = re.search(r"page_(\d+)\.(jpg|png)", os.path.basename(image_path))
                 if not match:
                     return None
                 page_num = int(match.group(1))
-                s3_key = f"pages/{job_id}/page_{page_num}.png"
+                ext = match.group(2)
+                content_type = 'image/jpeg' if ext == 'jpg' else 'image/png'
+                s3_key = f"pages/{job_id}/page_{page_num}.{ext}"
                 s3_client.upload_file(
                     Filename=image_path, Bucket=S3_BUCKET_NAME, Key=s3_key,
-                    ExtraArgs={'ContentType': 'image/png'}
+                    ExtraArgs={'ContentType': content_type}
                 )
                 return (page_num, s3_key, image_path)
             

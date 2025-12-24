@@ -21,6 +21,8 @@ import {
   type Job, 
   formatDate, 
   getButtonVisibility,
+  preloadJobImages,
+  shouldPreloadImages,
 } from '@/lib/utils';
 import { getStatusDisplayName, getStatusClass, getStatusIcon } from '@/lib/statusUtils';
 
@@ -39,6 +41,13 @@ export default function Home() {
       const data: Job[] = await response.json();
       data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setJobs(data);
+      
+      // Preload images for jobs that are processing or ready for segmentation
+      data.forEach(job => {
+        if (shouldPreloadImages(job.status)) {
+          preloadJobImages(job.id);
+        }
+      });
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : String(e);
       setError(`Failed to fetch jobs: ${errorMessage}`);

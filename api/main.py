@@ -32,5 +32,10 @@ app.add_middleware(
 async def root():
     return {"message": "Handwriting Conversion API Root (FastAPI)"}
 
+@app.get("/health")
+async def health():
+    """Health check endpoint for keep-warm pings."""
+    return {"status": "ok"}
+
 app.include_router(upload.router)
 app.include_router(jobs.router)
