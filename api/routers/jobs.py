@@ -1,28 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException, Body
 from fastapi.responses import StreamingResponse, Response
 import io
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
 from sqlalchemy.orm import Session
 import uuid
 from typing import List
 from fastapi import status
 from celery import Celery
-import tempfile
-import subprocess
-import os
-import shutil
 from PIL import Image
 import re
 
-_subprocess_executor = ThreadPoolExecutor(max_workers=4)
-_image_cache: dict[str, bytes] = {}
-
 from .. import models, schemas
 from ..database import get_db
-from ..s3_utils import download_from_s3, download_from_s3_async, get_s3_presigned_url, upload_content_to_s3, upload_content_to_s3_async
+from ..s3_utils import download_from_s3_async, get_s3_presigned_url, upload_content_to_s3_async
 from ..celery_utils import get_celery
-from ..tasks import compile_final_document
+from ..tasks import compile_final_document, compile_latex_preview, compile_latex_preview_with_images
 from ..config import get_logger
 from ..services.image_enhancer import enhance_image
 
@@ -242,258 +233,96 @@ async def trigger_final_compilation(
                  200: {"content": {"application/pdf": {}}},
                  400: {"description": "LaTeX Compilation Error"},
                  404: {"description": "Job not found"},
-                 500: {"description": "Internal server error or LaTeX compiler not found"}
+                 500: {"description": "Internal server error"},
+                 504: {"description": "Compilation timed out"}
              })
 async def generate_latex_preview(
     job_id: uuid.UUID,
     tex_content: str = Body(..., media_type="text/plain"), 
     db: Session = Depends(get_db)
 ):
+    import base64
+    
     db_job = db.query(models.Job).filter(models.Job.id == job_id).first()
     if db_job is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found")
 
-    if not shutil.which("latexmk"):
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="LaTeX compiler (latexmk) not found on the server."
-        )
-
-    with tempfile.TemporaryDirectory() as temp_dir:
-        temp_file_path = os.path.join(temp_dir, "preview.tex")
-        pdf_file_path = os.path.join(temp_dir, "preview.pdf")
-        log_file_path = os.path.join(temp_dir, "preview.log")
-
-        with open(temp_file_path, "w", encoding="utf-8") as f:
-            f.write(tex_content)
-
-        compile_command = [
-            "latexmk",
-            "-pdf",
-            "-interaction=nonstopmode",
-            "-file-line-error",
-            "-no-shell-escape",
-            "-output-directory=" + temp_dir,
-            temp_file_path
-        ]
-
-        async def run_latex_compile(cmd, cwd=None):
-            loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(
-                _subprocess_executor,
-                lambda: subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=30, cwd=cwd)
-            )
+    try:
+        task = compile_latex_preview.delay(tex_content)
+        result = task.get(timeout=90)
         
-        try:
-            logger.debug(f"Running LaTeX compilation for job {job_id}")
-            process = await run_latex_compile(compile_command)
-
-            if process.returncode != 0 or not os.path.exists(pdf_file_path):
-                logger.warning(f"LaTeX compilation failed for job {job_id} (return code: {process.returncode})")
-                log_content = ""
-                if os.path.exists(log_file_path):
-                    with open(log_file_path, "r", encoding="utf-8", errors="ignore") as log_f:
-                        log_content = log_f.read()[-2000:]
-                else:
-                    log_content = process.stderr or process.stdout or "No log file generated."
-                
-                log_content = log_content.replace(temp_dir, "[TEMP_DIR]")
-                
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"LaTeX compilation failed.\n--- Log Tail ---\n{log_content}"
-                )
-
-            with open(pdf_file_path, "rb") as f:
-                pdf_content = f.read()
-            
-            logger.debug(f"LaTeX compilation successful for job {job_id}")
-            return Response(content=pdf_content, media_type="application/pdf")
-
-        except subprocess.TimeoutExpired:
+        if not result.get("success"):
+            error_msg = result.get("error", "Unknown compilation error")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"LaTeX compilation failed.\n--- Error ---\n{error_msg}"
+            )
+        
+        pdf_bytes = base64.b64decode(result["pdf_base64"])
+        logger.debug(f"LaTeX compilation successful for job {job_id}")
+        return Response(content=pdf_bytes, media_type="application/pdf")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        if "timeout" in str(e).lower():
+            raise HTTPException(
+                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
                 detail="LaTeX compilation timed out."
             )
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.exception(f"Unexpected error during compilation for job {job_id}: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"An unexpected error occurred during compilation."
-            )
+        logger.exception(f"Unexpected error during compilation for job {job_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred during compilation."
+        )
 
 @router.post("/{job_id}/preview-with-images", tags=["Jobs", "Preview"], 
              responses={
                  200: {"content": {"application/pdf": {}}},
                  400: {"description": "LaTeX Compilation Error"},
                  404: {"description": "Job not found"},
-                 500: {"description": "Internal server error or LaTeX compiler not found"}
+                 500: {"description": "Internal server error"},
+                 504: {"description": "Compilation timed out"}
              })
 async def generate_latex_preview_with_images(
     job_id: uuid.UUID,
     tex_content: str = Body(..., media_type="text/plain"), 
     db: Session = Depends(get_db)
 ):
+    import base64
+    
     db_job = db.query(models.Job).filter(models.Job.id == job_id).first()
     if db_job is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found")
 
-    if not shutil.which("latexmk"):
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="LaTeX compiler (latexmk) not found on the server"
-        )
-
-    with tempfile.TemporaryDirectory() as temp_dir:
-        figures_dir = os.path.join(temp_dir, "figures")
-        os.makedirs(figures_dir, exist_ok=True)
+    try:
+        task = compile_latex_preview_with_images.delay(str(job_id), tex_content)
+        result = task.get(timeout=90)
         
-        segmentations = db.query(models.Segmentation).filter(
-            models.Segmentation.job_id == job_id
-        ).all()
-        
-        page_images = db.query(models.JobPageImage).filter(
-            models.JobPageImage.job_id == job_id
-        ).all()
-        
-        page_images_map = {p.page_number: p for p in page_images}
-        
-        needed_pages = set(seg.page_number for seg in segmentations)
-        page_bytes_map: dict[int, bytes] = {}
-        
-        download_tasks = []
-        for page_num in needed_pages:
-            page_record = page_images_map.get(page_num)
-            if page_record:
-                s3_path = page_record.s3_path
-                if s3_path in _image_cache:
-                    page_bytes_map[page_num] = _image_cache[s3_path]
-                else:
-                    download_tasks.append((page_num, s3_path))
-        
-        if download_tasks:
-            results = await asyncio.gather(
-                *[download_from_s3_async(s3_path) for _, s3_path in download_tasks]
-            )
-            for (page_num, s3_path), data in zip(download_tasks, results):
-                if data:
-                    _image_cache[s3_path] = data
-                    page_bytes_map[page_num] = data
-        
-        for seg in segmentations:
-            safe_label = re.sub(r'[^a-zA-Z0-9_\-]', '_', seg.label)
-            cropped_filename = f"{safe_label}.png"
-            cropped_image_output_path = os.path.join(figures_dir, cropped_filename)
-            
-            if seg.use_enhanced and seg.enhanced_s3_path:
-                enhanced_bytes = await download_from_s3_async(seg.enhanced_s3_path)
-                if enhanced_bytes:
-                    with open(cropped_image_output_path, 'wb') as f:
-                        f.write(enhanced_bytes)
-                    continue
-            
-            page_bytes = page_bytes_map.get(seg.page_number)
-            if not page_bytes:
-                continue
-
-            try:
-                with Image.open(io.BytesIO(page_bytes)) as img:
-                    img_width, img_height = img.size
-                    x1 = seg.x * img_width
-                    y1 = seg.y * img_height
-                    x2 = (seg.x + seg.width) * img_width
-                    y2 = (seg.y + seg.height) * img_height
-                    x1, y1 = max(0, x1), max(0, y1)
-                    x2, y2 = min(img_width, x2), min(img_height, y2)
-                    if x1 >= x2 or y1 >= y2:
-                        continue
-                    crop_box = (int(x1), int(y1), int(x2), int(y2))
-                    cropped_img = img.crop(crop_box)
-                    cropped_img.save(cropped_image_output_path, "PNG")
-            except Exception as crop_err:
-                logger.warning(f"Error cropping segmentation {seg.label}: {crop_err}")
-
-        modified_tex_content = tex_content
-        for seg in segmentations:
-            safe_label = re.sub(r'[^a-zA-Z0-9_\-]', '_', seg.label)
-            figure_path = f"figures/{safe_label}.png"
-            if os.path.exists(os.path.join(temp_dir, figure_path)):
-                placeholder_comment = f"% PLACEHOLDER: {seg.label}"
-                figure_include_code = (
-                    f"\\begin{{figure}}[htbp]\n"
-                    f"  \\centering\n"
-                    f"  \\includegraphics[width=0.8\\textwidth]{{{figure_path}}}\n"
-                    f"  \\caption{{{seg.label.replace('_', ' ')}}}\n"
-                    f"  \\label{{fig:{seg.label.lower()}}}\n"
-                    f"\\end{{figure}}"
-                )
-                modified_tex_content = modified_tex_content.replace(placeholder_comment, figure_include_code)
-
-        tex_path = os.path.join(temp_dir, "preview.tex")
-        with open(tex_path, 'w', encoding='utf-8') as f:
-            f.write(modified_tex_content)
-
-        compile_cmd = [
-            "latexmk", 
-            "-pdf",
-            "-interaction=nonstopmode",
-            "-halt-on-error",
-            "-no-shell-escape",
-            "preview.tex"
-        ]
-        
-        try:
-            loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(
-                _subprocess_executor,
-                lambda: subprocess.run(compile_cmd, cwd=temp_dir, capture_output=True, timeout=30)
-            )
-            
-            pdf_path = os.path.join(temp_dir, "preview.pdf")
-            
-            if not os.path.exists(pdf_path):
-                log_path = os.path.join(temp_dir, "preview.log")
-                error_message = "Compilation failed - no output PDF generated"
-                
-                if os.path.exists(log_path):
-                    with open(log_path, 'r', encoding='utf-8', errors='replace') as f:
-                        log_content = f.read()
-                    
-                    error_lines = [line for line in log_content.splitlines() 
-                                 if line.startswith('!') or "Error:" in line]
-                    if error_lines:
-                        error_message = "\n".join(error_lines[:15])
-                
-                return Response(
-                    content=error_message,
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    media_type="text/plain"
-                )
-            
-            with open(pdf_path, 'rb') as f:
-                pdf_content = f.read()
-                
+        if not result.get("success"):
+            error_msg = result.get("error", "Unknown compilation error")
             return Response(
-                content=pdf_content,
-                media_type="application/pdf"
+                content=error_msg,
+                status_code=status.HTTP_400_BAD_REQUEST,
+                media_type="text/plain"
             )
-            
-        except subprocess.TimeoutExpired:
+        
+        pdf_bytes = base64.b64decode(result["pdf_base64"])
+        return Response(content=pdf_bytes, media_type="application/pdf")
+        
+    except Exception as e:
+        if "timeout" in str(e).lower():
             return Response(
                 content="Compilation timed out",
-                status_code=status.HTTP_408_REQUEST_TIMEOUT,
+                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
                 media_type="text/plain"
             )
-            
-        except Exception as e:
-            logger.exception(f"Compilation error for job {job_id}: {e}")
-            return Response(
-                content="Compilation error",
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                media_type="text/plain"
-            )
+        logger.exception(f"Compilation error for job {job_id}: {e}")
+        return Response(
+            content="Compilation error",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            media_type="text/plain"
+        )
 
 @router.put("/{job_id}/tex", status_code=status.HTTP_200_OK)
 async def update_job_tex(

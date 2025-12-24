@@ -350,29 +350,36 @@ def compile_final_document(self, job_id_str: str):
             compile_success = False
             
             try:
-                for i in range(2):
-                    logger.info(f"Job {job_id}: Running pdflatex pass {i+1}...")
-                    compile_cmd = ["pdflatex", "-interaction=nonstopmode", "-no-shell-escape", os.path.basename(final_tex_path)]
-                    result = subprocess.run(
+                logger.info(f"Job {job_id}: Running latexmk...")
+                compile_cmd = [
+                    "latexmk",
+                    "-pdf",
+                    "-interaction=nonstopmode",
+                    "-halt-on-error",
+                    "-no-shell-escape",
+                    "-output-directory=" + temp_dir,
+                    final_tex_path
+                ]
+                result = subprocess.run(
+                    compile_cmd, 
+                    cwd=temp_dir, 
+                    capture_output=True,
+                    timeout=120
+                )
+                stdout_decoded = result.stdout.decode('utf-8', errors='replace')
+                stderr_decoded = result.stderr.decode('utf-8', errors='replace')
+                
+                if result.returncode != 0:
+                    raise subprocess.CalledProcessError(
+                        result.returncode, 
                         compile_cmd, 
-                        cwd=temp_dir, 
-                        capture_output=True,
-                        timeout=120
+                        output=stdout_decoded, 
+                        stderr=stderr_decoded
                     )
-                    stdout_decoded = result.stdout.decode('utf-8', errors='replace')
-                    stderr_decoded = result.stderr.decode('utf-8', errors='replace')
-                    
-                    if result.returncode != 0:
-                        raise subprocess.CalledProcessError(
-                            result.returncode, 
-                            compile_cmd, 
-                            output=stdout_decoded, 
-                            stderr=stderr_decoded
-                        )
-                    logger.info(f"Job {job_id}: pdflatex pass {i+1} successful.")
+                logger.info(f"Job {job_id}: latexmk successful.")
                 
                 if not os.path.exists(temp_pdf_path):
-                    raise FileNotFoundError(f"pdflatex completed but output PDF not found at {temp_pdf_path}")
+                    raise FileNotFoundError(f"latexmk completed but output PDF not found at {temp_pdf_path}")
                 compile_success = True
                 
             except subprocess.CalledProcessError as cpe:
@@ -394,19 +401,19 @@ def compile_final_document(self, job_id_str: str):
                 process_stderr = cpe.stderr if cpe.stderr else ""
                 error_detail = error_log_content if error_log_content != "Log file not found or unreadable." else process_stderr
                 
-                logger.error(f"pdflatex failed (exit code {cpe.returncode}). Details: ...{error_detail[-500:]}")
+                logger.error(f"latexmk failed (exit code {cpe.returncode}). Details: ...{error_detail[-500:]}")
                 job.status = models.JobStatus.FAILED
-                job.error_message = f"pdflatex failed (code {cpe.returncode}). Details: ...{error_detail[-500:]}"
+                job.error_message = f"latexmk failed (code {cpe.returncode}). Details: ...{error_detail[-500:]}"
                 
             except subprocess.TimeoutExpired:
-                logger.error("pdflatex command timed out.")
+                logger.error("latexmk command timed out.")
                 job.status = models.JobStatus.FAILED
-                job.error_message = "pdflatex command timed out after 120 seconds."
+                job.error_message = "latexmk command timed out after 120 seconds."
                 
             except FileNotFoundError as fnf_err:
-                logger.error(f"pdflatex ran but PDF output missing: {fnf_err}")
+                logger.error(f"latexmk ran but PDF output missing: {fnf_err}")
                 job.status = models.JobStatus.FAILED
-                job.error_message = f"pdflatex ran but PDF output missing: {fnf_err}"
+                job.error_message = f"latexmk ran but PDF output missing: {fnf_err}"
                 
             except Exception as compile_err:
                 logger.exception(f"Unexpected error during LaTeX compilation: {compile_err}")
@@ -462,3 +469,199 @@ def compile_final_document(self, job_id_str: str):
         if db:
             db.close()
         logger.info(f"Final compilation task for job ID {job_id_str} finished.")
+
+
+@celery_app.task(bind=True)
+def compile_latex_preview(self, tex_content: str):
+    """Celery task to compile LaTeX content and return PDF bytes as base64."""
+    import base64
+    logger.info("Starting LaTeX preview compilation task")
+    
+    with tempfile.TemporaryDirectory() as temp_dir:
+        tex_path = os.path.join(temp_dir, "preview.tex")
+        pdf_path = os.path.join(temp_dir, "preview.pdf")
+        log_path = os.path.join(temp_dir, "preview.log")
+        
+        with open(tex_path, 'w', encoding='utf-8') as f:
+            f.write(tex_content)
+        
+        compile_cmd = [
+            "latexmk",
+            "-pdf",
+            "-interaction=nonstopmode",
+            "-halt-on-error",
+            "-no-shell-escape",
+            "-output-directory=" + temp_dir,
+            tex_path
+        ]
+        
+        try:
+            result = subprocess.run(
+                compile_cmd,
+                cwd=temp_dir,
+                capture_output=True,
+                timeout=60
+            )
+            
+            if result.returncode != 0 or not os.path.exists(pdf_path):
+                error_msg = "Compilation failed"
+                if os.path.exists(log_path):
+                    with open(log_path, 'r', encoding='utf-8', errors='replace') as f:
+                        log_content = f.read()
+                    error_lines = [line for line in log_content.splitlines() 
+                                   if line.startswith('!') or "Error:" in line]
+                    if error_lines:
+                        error_msg = "\n".join(error_lines[:15])
+                    else:
+                        error_msg = log_content[-2000:]
+                return {"success": False, "error": error_msg}
+            
+            with open(pdf_path, 'rb') as f:
+                pdf_bytes = f.read()
+            
+            pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
+            logger.info("LaTeX preview compilation successful")
+            return {"success": True, "pdf_base64": pdf_base64}
+            
+        except subprocess.TimeoutExpired:
+            return {"success": False, "error": "Compilation timed out after 60 seconds"}
+        except Exception as e:
+            logger.exception(f"Unexpected error during preview compilation: {e}")
+            return {"success": False, "error": str(e)}
+
+
+@celery_app.task(bind=True)
+def compile_latex_preview_with_images(self, job_id_str: str, tex_content: str):
+    """Celery task to compile LaTeX with segmentation images and return PDF bytes as base64."""
+    import base64
+    from io import BytesIO
+    
+    logger.info(f"Starting LaTeX preview with images compilation for job {job_id_str}")
+    job_id = uuid.UUID(job_id_str)
+    db = SessionLocal()
+    
+    try:
+        job = db.query(models.Job).filter(models.Job.id == job_id).first()
+        if not job:
+            return {"success": False, "error": f"Job {job_id} not found"}
+        
+        segmentations = db.query(models.Segmentation).filter(
+            models.Segmentation.job_id == job_id
+        ).all()
+        
+        page_images = db.query(models.JobPageImage).filter(
+            models.JobPageImage.job_id == job_id
+        ).all()
+        page_images_map = {p.page_number: p for p in page_images}
+        
+        with tempfile.TemporaryDirectory() as temp_dir:
+            figures_dir = os.path.join(temp_dir, "figures")
+            os.makedirs(figures_dir, exist_ok=True)
+            
+            for seg in segmentations:
+                safe_label = re.sub(r'[^a-zA-Z0-9_\-]', '_', seg.label)
+                cropped_filename = f"{safe_label}.png"
+                cropped_image_output_path = os.path.join(figures_dir, cropped_filename)
+                
+                if seg.use_enhanced and seg.enhanced_s3_path:
+                    enhanced_bytes = download_from_s3(seg.enhanced_s3_path)
+                    if enhanced_bytes:
+                        with open(cropped_image_output_path, 'wb') as f:
+                            f.write(enhanced_bytes)
+                        continue
+                
+                page_record = page_images_map.get(seg.page_number)
+                if not page_record:
+                    continue
+                    
+                page_bytes = download_from_s3(page_record.s3_path)
+                if not page_bytes:
+                    continue
+                
+                try:
+                    with Image.open(BytesIO(page_bytes)) as img:
+                        img_width, img_height = img.size
+                        x1 = seg.x * img_width
+                        y1 = seg.y * img_height
+                        x2 = (seg.x + seg.width) * img_width
+                        y2 = (seg.y + seg.height) * img_height
+                        x1, y1 = max(0, x1), max(0, y1)
+                        x2, y2 = min(img_width, x2), min(img_height, y2)
+                        if x1 >= x2 or y1 >= y2:
+                            continue
+                        crop_box = (int(x1), int(y1), int(x2), int(y2))
+                        cropped_img = img.crop(crop_box)
+                        cropped_img.save(cropped_image_output_path, "PNG")
+                except Exception as crop_err:
+                    logger.warning(f"Error cropping segmentation {seg.label}: {crop_err}")
+            
+            modified_tex_content = tex_content
+            for seg in segmentations:
+                safe_label = re.sub(r'[^a-zA-Z0-9_\-]', '_', seg.label)
+                figure_path = f"figures/{safe_label}.png"
+                if os.path.exists(os.path.join(temp_dir, figure_path)):
+                    placeholder_comment = f"% PLACEHOLDER: {seg.label}"
+                    figure_include_code = (
+                        f"\\begin{{figure}}[htbp]\n"
+                        f"  \\centering\n"
+                        f"  \\includegraphics[width=0.8\\textwidth]{{{figure_path}}}\n"
+                        f"  \\caption{{{seg.label.replace('_', ' ')}}}\n"
+                        f"  \\label{{fig:{seg.label.lower()}}}\n"
+                        f"\\end{{figure}}"
+                    )
+                    modified_tex_content = modified_tex_content.replace(placeholder_comment, figure_include_code)
+            
+            tex_path = os.path.join(temp_dir, "preview.tex")
+            pdf_path = os.path.join(temp_dir, "preview.pdf")
+            log_path = os.path.join(temp_dir, "preview.log")
+            
+            with open(tex_path, 'w', encoding='utf-8') as f:
+                f.write(modified_tex_content)
+            
+            compile_cmd = [
+                "latexmk",
+                "-pdf",
+                "-interaction=nonstopmode",
+                "-halt-on-error",
+                "-no-shell-escape",
+                "preview.tex"
+            ]
+            
+            try:
+                result = subprocess.run(
+                    compile_cmd,
+                    cwd=temp_dir,
+                    capture_output=True,
+                    timeout=60
+                )
+                
+                if not os.path.exists(pdf_path):
+                    error_msg = "Compilation failed - no output PDF"
+                    if os.path.exists(log_path):
+                        with open(log_path, 'r', encoding='utf-8', errors='replace') as f:
+                            log_content = f.read()
+                        error_lines = [line for line in log_content.splitlines() 
+                                       if line.startswith('!') or "Error:" in line]
+                        if error_lines:
+                            error_msg = "\n".join(error_lines[:15])
+                    return {"success": False, "error": error_msg}
+                
+                with open(pdf_path, 'rb') as f:
+                    pdf_bytes = f.read()
+                
+                pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
+                logger.info(f"LaTeX preview with images compilation successful for job {job_id}")
+                return {"success": True, "pdf_base64": pdf_base64}
+                
+            except subprocess.TimeoutExpired:
+                return {"success": False, "error": "Compilation timed out"}
+            except Exception as e:
+                logger.exception(f"Unexpected error during preview compilation: {e}")
+                return {"success": False, "error": str(e)}
+    
+    except Exception as e:
+        logger.exception(f"Error in preview with images task: {e}")
+        return {"success": False, "error": str(e)}
+    finally:
+        if db:
+            db.close()
