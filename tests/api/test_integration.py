@@ -105,8 +105,10 @@ class TestErrorHandling:
 
     def test_s3_failure_during_download(self, client, sample_completed_job):
         """Test handling S3 failure during download."""
-        with patch("api.routers.jobs.download_from_s3") as mock_download:
-            mock_download.return_value = None
+        with patch("api.routers.jobs.download_from_s3_async") as mock_download:
+            async def mock_async_download(key):
+                return None
+            mock_download.side_effect = mock_async_download
             
             response = client.get(f"/jobs/{sample_completed_job.id}/tex")
             

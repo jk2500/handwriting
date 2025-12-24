@@ -293,10 +293,16 @@ class TestCompilationEndpoints:
 class TestPreviewEndpoints:
     """Tests for preview endpoints."""
 
-    def test_preview_no_latexmk(self, client, sample_job_with_tex):
-        """Test preview fails when latexmk not found."""
-        with patch("shutil.which") as mock_which:
-            mock_which.return_value = None
+    def test_preview_success(self, client, sample_job_with_tex):
+        """Test preview compilation via Celery."""
+        import base64
+        mock_pdf = b"%PDF-1.4 test"
+        mock_result = {"success": True, "pdf_base64": base64.b64encode(mock_pdf).decode()}
+        
+        with patch("api.routers.jobs.compile_latex_preview") as mock_task:
+            mock_async_result = MagicMock()
+            mock_async_result.get.return_value = mock_result
+            mock_task.delay.return_value = mock_async_result
             
             response = client.post(
                 f"/jobs/{sample_job_with_tex.id}/preview",
@@ -304,8 +310,89 @@ class TestPreviewEndpoints:
                 headers={"Content-Type": "text/plain"}
             )
             
-            assert response.status_code == 500
-            assert "latexmk" in response.json()["detail"]
+            assert response.status_code == 200
+            assert response.headers["content-type"] == "application/pdf"
+            assert response.content == mock_pdf
+
+    def test_preview_compilation_failure(self, client, sample_job_with_tex):
+        """Test preview returns error on compilation failure."""
+        mock_result = {"success": False, "error": "! Missing $ inserted"}
+        
+        with patch("api.routers.jobs.compile_latex_preview") as mock_task:
+            mock_async_result = MagicMock()
+            mock_async_result.get.return_value = mock_result
+            mock_task.delay.return_value = mock_async_result
+            
+            response = client.post(
+                f"/jobs/{sample_job_with_tex.id}/preview",
+                content="invalid latex",
+                headers={"Content-Type": "text/plain"}
+            )
+            
+            assert response.status_code == 400
+            assert "Missing $" in response.json()["detail"]
+
+    def test_preview_timeout(self, client, sample_job_with_tex):
+        """Test preview returns timeout error."""
+        with patch("api.routers.jobs.compile_latex_preview") as mock_task:
+            mock_async_result = MagicMock()
+            mock_async_result.get.side_effect = Exception("timeout exceeded")
+            mock_task.delay.return_value = mock_async_result
+            
+            response = client.post(
+                f"/jobs/{sample_job_with_tex.id}/preview",
+                content="\\documentclass{article}\\begin{document}Test\\end{document}",
+                headers={"Content-Type": "text/plain"}
+            )
+            
+            assert response.status_code == 504
+
+    def test_preview_job_not_found(self, client):
+        """Test preview for non-existent job."""
+        fake_id = uuid.uuid4()
+        response = client.post(
+            f"/jobs/{fake_id}/preview",
+            content="content",
+            headers={"Content-Type": "text/plain"}
+        )
+        assert response.status_code == 404
+
+    def test_preview_with_images_success(self, client, sample_job_with_tex):
+        """Test preview with images via Celery."""
+        import base64
+        mock_pdf = b"%PDF-1.4 test"
+        mock_result = {"success": True, "pdf_base64": base64.b64encode(mock_pdf).decode()}
+        
+        with patch("api.routers.jobs.compile_latex_preview_with_images") as mock_task:
+            mock_async_result = MagicMock()
+            mock_async_result.get.return_value = mock_result
+            mock_task.delay.return_value = mock_async_result
+            
+            response = client.post(
+                f"/jobs/{sample_job_with_tex.id}/preview-with-images",
+                content="\\documentclass{article}\\begin{document}Test\\end{document}",
+                headers={"Content-Type": "text/plain"}
+            )
+            
+            assert response.status_code == 200
+            assert response.headers["content-type"] == "application/pdf"
+
+    def test_preview_with_images_failure(self, client, sample_job_with_tex):
+        """Test preview with images returns error on failure."""
+        mock_result = {"success": False, "error": "Compilation failed"}
+        
+        with patch("api.routers.jobs.compile_latex_preview_with_images") as mock_task:
+            mock_async_result = MagicMock()
+            mock_async_result.get.return_value = mock_result
+            mock_task.delay.return_value = mock_async_result
+            
+            response = client.post(
+                f"/jobs/{sample_job_with_tex.id}/preview-with-images",
+                content="invalid",
+                headers={"Content-Type": "text/plain"}
+            )
+            
+            assert response.status_code == 400
 
 
 class TestUpdateTexEndpoint:

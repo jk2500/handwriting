@@ -9,7 +9,13 @@ from datetime import datetime, timezone
 import pytest
 
 from api import models
-from api.tasks import parse_descriptions, process_handwriting_conversion, compile_final_document
+from api.tasks import (
+    parse_descriptions, 
+    process_handwriting_conversion, 
+    compile_final_document,
+    compile_latex_preview,
+    compile_latex_preview_with_images
+)
 
 
 class TestParseDescriptions:
@@ -195,7 +201,7 @@ class TestCompileFinalDocument:
         assert "failed" in result.lower()
 
     def test_compile_uses_no_shell_escape(self, mock_compile_dependencies, sample_job_with_tex, db_session):
-        """Test compile task uses -no-shell-escape flag."""
+        """Test compile task uses -no-shell-escape flag with latexmk."""
         sample_job_with_tex.status = models.JobStatus.COMPILATION_PENDING
         mock_compile_dependencies["db"].query.return_value.filter.return_value.first.return_value = sample_job_with_tex
         mock_compile_dependencies["db"].query.return_value.filter.return_value.all.return_value = []
@@ -208,8 +214,89 @@ class TestCompileFinalDocument:
         calls = mock_compile_dependencies["subprocess"].call_args_list
         for call in calls:
             cmd = call[0][0] if call[0] else call[1].get("args", [])
-            if "pdflatex" in cmd:
+            if "latexmk" in cmd:
                 assert "-no-shell-escape" in cmd
+
+
+class TestCompileLatexPreview:
+    """Tests for compile_latex_preview task."""
+
+    def test_preview_success(self):
+        """Test successful preview compilation."""
+        with patch("subprocess.run") as mock_subprocess, \
+             patch("os.path.exists") as mock_exists, \
+             patch("builtins.open", create=True) as mock_open:
+            
+            mock_result = MagicMock()
+            mock_result.returncode = 0
+            mock_subprocess.return_value = mock_result
+            mock_exists.return_value = True
+            mock_open.return_value.__enter__.return_value.read.return_value = b"%PDF-1.4"
+            
+            result = compile_latex_preview.run("\\documentclass{article}\\begin{document}Test\\end{document}")
+            
+            assert result["success"] is True
+            assert "pdf_base64" in result
+
+    def test_preview_compilation_failure(self):
+        """Test preview handles compilation failure."""
+        with patch("subprocess.run") as mock_subprocess, \
+             patch("os.path.exists") as mock_exists:
+            
+            mock_result = MagicMock()
+            mock_result.returncode = 1
+            mock_subprocess.return_value = mock_result
+            mock_exists.return_value = False
+            
+            result = compile_latex_preview.run("invalid latex")
+            
+            assert result["success"] is False
+            assert "error" in result
+
+    def test_preview_timeout(self):
+        """Test preview handles timeout."""
+        import subprocess
+        
+        with patch("subprocess.run") as mock_subprocess:
+            mock_subprocess.side_effect = subprocess.TimeoutExpired(cmd="latexmk", timeout=60)
+            
+            result = compile_latex_preview.run("\\documentclass{article}")
+            
+            assert result["success"] is False
+            assert "timed out" in result["error"].lower()
+
+    def test_preview_uses_no_shell_escape(self):
+        """Test preview uses -no-shell-escape flag."""
+        with patch("subprocess.run") as mock_subprocess, \
+             patch("os.path.exists") as mock_exists:
+            
+            mock_result = MagicMock()
+            mock_result.returncode = 0
+            mock_subprocess.return_value = mock_result
+            mock_exists.return_value = True
+            
+            with patch("builtins.open", create=True) as mock_open:
+                mock_open.return_value.__enter__.return_value.read.return_value = b"%PDF"
+                compile_latex_preview.run("\\documentclass{article}")
+            
+            call_args = mock_subprocess.call_args[0][0]
+            assert "-no-shell-escape" in call_args
+
+
+class TestCompileLatexPreviewWithImages:
+    """Tests for compile_latex_preview_with_images task."""
+
+    def test_preview_with_images_job_not_found(self):
+        """Test preview with images handles job not found."""
+        with patch("api.tasks.SessionLocal") as mock_session:
+            mock_db = MagicMock()
+            mock_session.return_value = mock_db
+            mock_db.query.return_value.filter.return_value.first.return_value = None
+            
+            result = compile_latex_preview_with_images.run(str(uuid.uuid4()), "content")
+            
+            assert result["success"] is False
+            assert "not found" in result["error"]
 
 
 class TestTaskErrorHandling:
