@@ -137,27 +137,29 @@ class TestGetCorsOrigins:
             origins = get_cors_origins()
             assert "http://localhost:3000" in origins
 
-    def test_get_cors_origins_includes_vercel_urls(self):
-        """Test that CORS origins includes Vercel URLs."""
+    def test_get_cors_origins_from_env_variable(self):
+        """Test that CORS origins uses CORS_ORIGINS env variable when set."""
         from api.config import get_cors_origins
         
         with patch.dict(os.environ, {
-            "FRONTEND_URL": "http://localhost:3000",
-            "VERCEL_URL": "my-app.vercel.app",
-            "VERCEL_BRANCH_URL": "my-app-git-branch.vercel.app"
+            "CORS_ORIGINS": "https://my-app.vercel.app,https://another-app.com"
         }):
             get_cors_origins.cache_clear()
             origins = get_cors_origins()
             assert "https://my-app.vercel.app" in origins
-            assert "https://my-app-git-branch.vercel.app" in origins
+            assert "https://another-app.com" in origins
 
-    def test_get_cors_origins_includes_hardcoded_domain(self):
-        """Test that CORS origins includes hardcoded Vercel domain."""
+    def test_get_cors_origins_defaults_to_localhost(self):
+        """Test that CORS origins defaults to localhost when no env vars set."""
         from api.config import get_cors_origins
         
-        get_cors_origins.cache_clear()
-        origins = get_cors_origins()
-        assert "https://handwriting-omega.vercel.app" in origins
+        with patch.dict(os.environ, {}, clear=True):
+            for key in ["CORS_ORIGINS", "FRONTEND_URL"]:
+                if key in os.environ:
+                    del os.environ[key]
+            get_cors_origins.cache_clear()
+            origins = get_cors_origins()
+            assert "http://localhost:3000" in origins
 
     def test_get_cors_origins_removes_duplicates(self):
         """Test that CORS origins has no duplicates."""
